@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowUpRight, Github, Mail, Send } from "lucide-react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { BufferGeometry, Float32BufferAttribute, Vector3 } from "three";
+import { BufferGeometry, Float32BufferAttribute, Vector3, type Points as ThreePoints } from "three";
 
 type SectionId = "home" | "projects" | "cv" | "contact";
 
@@ -14,6 +14,7 @@ const sections: { id: SectionId; label: string; position: [number, number, numbe
 const cvDestination: [number, number, number] = [-10, 1.6, 12];
 
 function Space() {
+  const pointsRef = useRef<ThreePoints>(null);
   const points = useMemo(() => {
     const positions: number[] = [];
     let seed = 421;
@@ -30,9 +31,8 @@ function Space() {
   }, []);
 
   useFrame(({ clock }) => {
-    const time = clock.getElapsedTime();
-    // Gentle drift makes the environment feel alive without competing with the content.
-    if (points.attributes.position) points.attributes.position.needsUpdate = time < 0;
+    // Gentle parallax drift makes the environment feel alive without competing with the content.
+    if (pointsRef.current) pointsRef.current.rotation.y = Math.sin(clock.getElapsedTime() * 0.08) * 0.025;
   });
 
   return (
@@ -43,7 +43,7 @@ function Space() {
       <hemisphereLight args={["#ffffff", "#a9abc6", 1.1]} />
       <directionalLight position={[2, 7, 6]} intensity={1.7} />
       <pointLight position={[-8, 4, -4]} color="#b9b1f0" intensity={18} distance={26} />
-      <points geometry={points}>
+      <points ref={pointsRef} geometry={points}>
         <pointsMaterial color="#9b9bbd" size={0.035} transparent opacity={0.55} sizeAttenuation depthWrite={false} />
       </points>
     </>
