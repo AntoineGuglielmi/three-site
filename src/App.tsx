@@ -17,6 +17,7 @@ const sections: Section[] = [
   { id: "cv", label: "Mon CV", position: [-10, 1.6, 0] },
   { id: "contact", label: "Contact", position: [0, 1.6, -12] },
 ];
+const cvDestination: [number, number, number] = [-10, 1.6, -12];
 
 function GlassPlaque({
   section,
@@ -67,23 +68,13 @@ function GlassPlaque({
         </section>
       )}
 
-      {section.id === "cv" && (
+      {section.id === "cv" && !cvDetail && (
         <section className="glass-plaque cv-plaque" aria-label="Introduction au CV">
-          {cvDetail ? (
-            <>
-              <button className="back-link" onClick={() => onCvDetail(false)}><ArrowLeft size={15} /> Retour</button>
-              <h2>Mon parcours</h2>
-              <p className="plaque-copy">Un espace dédié à mon expérience, mes compétences et mes projets. Les plaques de cette zone seront conçues dans une prochaine étape.</p>
-            </>
-          ) : (
-            <>
-              <h2>Mon parcours</h2>
-              <p className="plaque-copy">
-                Développeur frontend orienté React et TypeScript, je m’intéresse à l’architecture, aux systèmes de design et à l’accessibilité.
-              </p>
-              <button className="primary-link" onClick={() => onCvDetail(true)}>Explorer mon CV <ArrowUpRight size={16} /></button>
-            </>
-          )}
+          <h2>Mon parcours</h2>
+          <p className="plaque-copy">
+            Développeur frontend orienté React et TypeScript, je m’intéresse à l’architecture, aux systèmes de design et à l’accessibilité.
+          </p>
+          <button className="primary-link" onClick={() => onCvDetail(true)}>Explorer mon CV <ArrowUpRight size={16} /></button>
         </section>
       )}
 
@@ -109,6 +100,18 @@ function GlassPlaque({
   );
 }
 
+function CvDestination({ onBack }: { onBack: () => void }) {
+  return (
+    <Html position={cvDestination} center zIndexRange={[10, 0]}>
+      <section className="glass-plaque cv-plaque" aria-label="Espace CV">
+        <button className="back-link" onClick={onBack}><ArrowLeft size={15} /> Retour à l’introduction</button>
+        <h2>Mon CV</h2>
+        <p className="plaque-copy">Cet espace accueillera les plaques détaillées de mon parcours. Nous pourrons les construire ensuite.</p>
+      </section>
+    </Html>
+  );
+}
+
 function World({
   activeSection,
   onNavigate,
@@ -127,9 +130,10 @@ function World({
 
   useEffect(() => {
     const section = sections.find(({ id }) => id === activeSection) ?? sections[0];
-    targetPosition.current.set(section.position[0], section.position[1], section.position[2] + 8);
-    targetLookAt.current.set(...section.position);
-  }, [activeSection]);
+    const destination = activeSection === "cv" && cvDetail ? cvDestination : section.position;
+    targetPosition.current.set(destination[0], destination[1], destination[2] + 8);
+    targetLookAt.current.set(...destination);
+  }, [activeSection, cvDetail]);
 
   useFrame((_, delta) => {
     const easing = 1 - Math.exp(-delta * 1.7);
@@ -144,7 +148,7 @@ function World({
       <fog attach="fog" args={["#e9ebf3", 24, 60]} />
       <ambientLight intensity={1.6} />
       <hemisphereLight args={["#ffffff", "#b8bad0", 1.1]} />
-      <directionalLight position={[2, 5, 6]} intensity={1.4} color="#fffaf6" />
+      <directionalLight position={[2, 5, 6]} intensity={1.4} />
       {sections.map((section) => (
         <GlassPlaque
           key={section.id}
@@ -154,6 +158,7 @@ function World({
           onCvDetail={onCvDetail}
         />
       ))}
+      {activeSection === "cv" && cvDetail && <CvDestination onBack={() => onCvDetail(false)} />}
     </>
   );
 }
