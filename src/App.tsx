@@ -1,4 +1,3 @@
-import { Html } from "@react-three/drei";
 import { ArrowLeft, ArrowUpRight, Github, Mail, Send } from "lucide-react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -157,34 +156,61 @@ const sectionPreviews: Record<SectionId, { title: string; copy: string }> = {
   contact: { title: "Contact", copy: "Parlons de votre prochain projet." },
 };
 
-function WorldPlaque({ id, activeSection, cvDetail, onNavigate, onCvDetail }: {
+type PlaqueRefs = Record<SectionId, HTMLDivElement | null>;
+
+function PlaqueProjector({ plaqueRefs }: { plaqueRefs: { current: PlaqueRefs } }) {
+  const { camera, size } = useThree();
+  const projected = useMemo(() => new Vector3(), []);
+
+  useFrame(() => {
+    camera.updateMatrixWorld();
+    for (const section of sections) {
+      const element = plaqueRefs.current[section.id];
+      if (!element) continue;
+
+      projected.set(...section.position).project(camera);
+      const inFront = projected.z > -1 && projected.z < 1;
+      const x = (projected.x * 0.5 + 0.5) * size.width;
+      const y = (-projected.y * 0.5 + 0.5) * size.height;
+      const onScreen = x > -size.width * 0.6 && x < size.width * 1.6
+        && y > -size.height * 0.6 && y < size.height * 1.6;
+
+      element.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+      element.style.visibility = inFront && onScreen ? "visible" : "hidden";
+      element.style.pointerEvents = inFront && onScreen ? "auto" : "none";
+    }
+  });
+
+  return null;
+}
+
+function WorldPlaque({ id, activeSection, cvDetail, onNavigate, onCvDetail, plaqueRef }: {
   id: SectionId;
   activeSection: SectionId;
   cvDetail: boolean;
   onNavigate: (id: SectionId) => void;
   onCvDetail: (value: boolean) => void;
+  plaqueRef: (element: HTMLDivElement | null) => void;
 }) {
-  const section = sections.find((item) => item.id === id)!;
   const isActive = activeSection === id;
 
   return (
-    <Html position={section.position} center zIndexRange={isActive ? [1000, 1000] : [100, 100]}>
-      <div className={`world-plaque ${isActive ? "is-active" : "is-nearby"}`}>
-        <button className="world-preview" onClick={() => onNavigate(id)} aria-label={`Rejoindre la section ${sectionPreviews[id].title}`}>
-          <span className="plaque-eyebrow">À proximité</span>
-          <strong>{sectionPreviews[id].title}</strong>
-          <span>{sectionPreviews[id].copy}</span>
-          <span className="preview-arrow"><ArrowUpRight size={20} /></span>
-        </button>
-        <SectionPlaque section={id} cvDetail={cvDetail} onNavigate={onNavigate} onCvDetail={onCvDetail} />
-      </div>
-    </Html>
+    <div ref={plaqueRef} className={`world-plaque ${isActive ? "is-active" : "is-nearby"}`}>
+      <button className="world-preview" onClick={() => onNavigate(id)} aria-label={`Rejoindre la section ${sectionPreviews[id].title}`}>
+        <span className="plaque-eyebrow">À proximité</span>
+        <strong>{sectionPreviews[id].title}</strong>
+        <span>{sectionPreviews[id].copy}</span>
+        <span className="preview-arrow"><ArrowUpRight size={20} /></span>
+      </button>
+      <SectionPlaque section={id} cvDetail={cvDetail} onNavigate={onNavigate} onCvDetail={onCvDetail} />
+    </div>
   );
 }
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<SectionId>("home");
   const [cvDetail, setCvDetail] = useState(false);
+  const plaqueRefs = useRef<PlaqueRefs>({ home: null, projects: null, cv: null, contact: null });
   const navigateTo = (section: SectionId) => {
     if (section === activeSection && section !== "cv") return;
     setCvDetail(false);
@@ -197,10 +223,21 @@ export default function App() {
         <Canvas camera={{ position: [0, 1.6, 8], fov: 48 }} dpr={[1, 1.5]}>
           <Space />
           <CameraJourney activeSection={activeSection} />
-          {sections.map(({ id }) => (
-            <WorldPlaque key={id} id={id} activeSection={activeSection} cvDetail={cvDetail} onNavigate={navigateTo} onCvDetail={setCvDetail} />
-          ))}
+          <PlaqueProjector plaqueRefs={plaqueRefs} />
         </Canvas>
+      </div>
+      <div className="plaque-overlay" aria-label="Plaques de navigation">
+        {sections.map(({ id }) => (
+          <WorldPlaque
+            key={id}
+            id={id}
+            activeSection={activeSection}
+            cvDetail={cvDetail}
+            onNavigate={navigateTo}
+            onCvDetail={setCvDetail}
+            plaqueRef={(element) => { plaqueRefs.current[id] = element; }}
+          />
+        ))}
       </div>
       <header className="topbar">
         <button className="brand" onClick={() => navigateTo("home")} aria-label="Retour à l’accueil">antoine-g<span>.</span></button>
