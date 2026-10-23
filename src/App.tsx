@@ -29,11 +29,10 @@ function GlassPlaque({
   cvDetail: boolean;
   onCvDetail: (value: boolean) => void;
 }) {
-  const position: [number, number, number] = [section.position[0], section.position[1], section.position[2]];
-  const goToProjects = () => onNavigate("projects");
+  const position: [number, number, number] = [...section.position];
 
   return (
-    <Html position={position} center distanceFactor={10} zIndexRange={[10, 0]}>
+    <Html position={position} center zIndexRange={[10, 0]}>
       {section.id === "home" && (
         <section className="glass-plaque hero-plaque" aria-label="Présentation">
           <h1>Antoine Guglielmi</h1>
@@ -42,7 +41,7 @@ function GlassPlaque({
             Je conçois des interfaces web soignées, accessibles et robustes, avec une attention particulière portée à l’expérience et aux détails.
           </p>
           <div className="hero-actions">
-            <button className="primary-link" onClick={goToProjects}>Voir mes projets <ArrowUpRight size={16} /></button>
+            <button className="primary-link" onClick={() => onNavigate("projects")}>Voir mes projets <ArrowUpRight size={16} /></button>
             <button className="quiet-link" onClick={() => onNavigate("contact")}>Me contacter</button>
           </div>
         </section>
@@ -74,7 +73,7 @@ function GlassPlaque({
             <>
               <button className="back-link" onClick={() => onCvDetail(false)}><ArrowLeft size={15} /> Retour</button>
               <h2>Mon parcours</h2>
-              <p className="plaque-copy">Cette partie ouvrira sur un espace dédié à mon expérience, mes compétences et mes projets.</p>
+              <p className="plaque-copy">Un espace dédié à mon expérience, mes compétences et mes projets. Les plaques de cette zone seront conçues dans une prochaine étape.</p>
             </>
           ) : (
             <>
@@ -124,6 +123,7 @@ function World({
   const { camera } = useThree();
   const targetPosition = useRef(new Vector3(0, 1.6, 8));
   const targetLookAt = useRef(new Vector3(...sections[0].position));
+  const currentLookAt = useRef(new Vector3(...sections[0].position));
 
   useEffect(() => {
     const section = sections.find(({ id }) => id === activeSection) ?? sections[0];
@@ -132,8 +132,10 @@ function World({
   }, [activeSection]);
 
   useFrame((_, delta) => {
-    camera.position.lerp(targetPosition.current, 1 - Math.exp(-delta * 1.7));
-    camera.lookAt(targetLookAt.current);
+    const easing = 1 - Math.exp(-delta * 1.7);
+    camera.position.lerp(targetPosition.current, easing);
+    currentLookAt.current.lerp(targetLookAt.current, easing);
+    camera.lookAt(currentLookAt.current);
   });
 
   return (
@@ -200,8 +202,6 @@ export default function App() {
           </button>
         ))}
       </nav>
-
-      <div className="ambient-note">Un espace à explorer</div>
     </main>
   );
 }
