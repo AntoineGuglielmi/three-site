@@ -30,7 +30,8 @@ function GlassPlaque({
   cvDetail: boolean;
   onCvDetail: (value: boolean) => void;
 }) {
-  const position: [number, number, number] = [...section.position];
+  const position: [number, number, number] =
+    section.id === "cv" && cvDetail ? [...cvDestination] : [...section.position];
 
   return (
     <Html position={position} center zIndexRange={[10, 0]}>
@@ -78,6 +79,14 @@ function GlassPlaque({
         </section>
       )}
 
+      {section.id === "cv" && cvDetail && (
+        <section className="glass-plaque cv-plaque" aria-label="Espace CV">
+          <button className="back-link" onClick={() => onCvDetail(false)}><ArrowLeft size={15} /> Retour à l’introduction</button>
+          <h2>Mon CV</h2>
+          <p className="plaque-copy">Cet espace accueillera les plaques détaillées de mon parcours. Nous pourrons les construire ensuite.</p>
+        </section>
+      )}
+
       {section.id === "contact" && (
         <section className="glass-plaque contact-plaque" aria-label="Formulaire de contact">
           <h2>Parlons de votre projet.</h2>
@@ -96,18 +105,6 @@ function GlassPlaque({
           <a className="email-link" href="mailto:hello@antoine-g.com"><Mail size={15} /> hello@antoine-g.com</a>
         </section>
       )}
-    </Html>
-  );
-}
-
-function CvDestination({ onBack }: { onBack: () => void }) {
-  return (
-    <Html position={cvDestination} center zIndexRange={[10, 0]}>
-      <section className="glass-plaque cv-plaque" aria-label="Espace CV">
-        <button className="back-link" onClick={onBack}><ArrowLeft size={15} /> Retour à l’introduction</button>
-        <h2>Mon CV</h2>
-        <p className="plaque-copy">Cet espace accueillera les plaques détaillées de mon parcours. Nous pourrons les construire ensuite.</p>
-      </section>
     </Html>
   );
 }
@@ -149,16 +146,12 @@ function World({
       <ambientLight intensity={1.6} />
       <hemisphereLight args={["#ffffff", "#b8bad0", 1.1]} />
       <directionalLight position={[2, 5, 6]} intensity={1.4} />
-      {sections.map((section) => (
-        <GlassPlaque
-          key={section.id}
-          section={section}
-          onNavigate={onNavigate}
-          cvDetail={cvDetail}
-          onCvDetail={onCvDetail}
-        />
-      ))}
-      {activeSection === "cv" && cvDetail && <CvDestination onBack={() => onCvDetail(false)} />}
+      <GlassPlaque
+        section={sections.find(({ id }) => id === activeSection) ?? sections[0]}
+        onNavigate={onNavigate}
+        cvDetail={cvDetail}
+        onCvDetail={onCvDetail}
+      />
     </>
   );
 }
