@@ -36,6 +36,7 @@ a { text-decoration: none; }
 .world-plaque.is-active { width: min(1020px, 80vw); pointer-events: auto; }
 .world-plaque.is-nearby { width: clamp(300px, 35vw, 470px); pointer-events: auto; }
 .world-plaque .glass-plaque { width: 100%; max-width: none; pointer-events: auto; }
+.world-plaque.is-active .world-preview { display: none; }
 .world-plaque.is-nearby .glass-plaque { display: none; }
 .world-preview {
   position: relative;
