@@ -142,6 +142,43 @@ function SectionPlaque({ section, cvDetail, onNavigate, onCvDetail }: {
   );
 }
 
+const sectionPreviews: Record<SectionId, { title: string; copy: string }> = {
+  home: { title: "Accueil", copy: "Le point de départ." },
+  projects: { title: "Projets", copy: "Des produits et des expériences web." },
+  cv: { title: "Mon parcours", copy: "Expérience, compétences et approche." },
+  contact: { title: "Contact", copy: "Parlons de votre prochain projet." },
+};
+
+const nearbySections: Record<SectionId, SectionId[]> = {
+  home: ["cv", "projects", "contact"],
+  projects: ["home", "contact", "cv"],
+  cv: ["contact", "home", "projects"],
+  contact: ["projects", "cv", "home"],
+};
+
+function NearbyPlaques({ activeSection, onNavigate }: {
+  activeSection: SectionId;
+  onNavigate: (id: SectionId) => void;
+}) {
+  return (
+    <div className="nearby-plaques" aria-label="Sections à proximité">
+      {nearbySections[activeSection].map((id, index) => (
+        <button
+          className={`nearby-plaque nearby-plaque-${index + 1}`}
+          key={id}
+          onClick={() => onNavigate(id)}
+          aria-label={`Explorer la section ${sectionPreviews[id].title}`}
+        >
+          <span className="nearby-kicker">À proximité</span>
+          <strong>{sectionPreviews[id].title}</strong>
+          <span className="nearby-copy">{sectionPreviews[id].copy}</span>
+          <span className="nearby-open"><ArrowUpRight size={15} /></span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   const [activeSection, setActiveSection] = useState<SectionId>("home");
   const [cvDetail, setCvDetail] = useState(false);
@@ -164,6 +201,7 @@ export default function App() {
         <a className="source-link" href="https://github.com/AntoineGuglielmi" target="_blank" rel="noreferrer" aria-label="GitHub"><Github size={17} /></a>
       </header>
       <div className="plaque-stage" key={activeSection + (cvDetail ? "-detail" : "")}>
+        <NearbyPlaques activeSection={activeSection} onNavigate={navigateTo} />
         <SectionPlaque section={activeSection} cvDetail={cvDetail} onNavigate={navigateTo} onCvDetail={setCvDetail} />
       </div>
       <nav className="navigation-plaque" aria-label="Navigation principale">
