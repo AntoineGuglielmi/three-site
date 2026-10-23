@@ -129,7 +129,7 @@ function SectionPlaque({ section, cvDetail, onNavigate, onCvDetail }: {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const subject = encodeURIComponent(`Message depuis antoine-g.com — ${String(form.get("name"))}`);
-        const body = encodeURIComponent(`De : ${String(form.get("name"))}\\nEmail : ${String(form.get("email"))}\\n\\n${String(form.get("message"))}`);
+        const body = encodeURIComponent(`De : ${String(form.get("name"))}\nEmail : ${String(form.get("email"))}\n\n${String(form.get("message"))}`);
         window.location.href = `mailto:hello@antoine-g.com?subject=${subject}&body=${body}`;
       }}>
         <label>Nom<input name="name" autoComplete="name" placeholder="Votre nom" required /></label>
