@@ -1,17 +1,18 @@
+import { Html } from "@react-three/drei";
 import { ArrowLeft, ArrowUpRight, Github, Mail, Send } from "lucide-react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { BufferGeometry, Float32BufferAttribute, Vector3, type Points as ThreePoints } from "three";
 
 type SectionId = "home" | "projects" | "cv" | "contact";
+type WorldPosition = [number, number, number];
 
-const sections: { id: SectionId; label: string; position: [number, number, number] }[] = [
+const sections: { id: SectionId; label: string; position: WorldPosition }[] = [
   { id: "home", label: "Accueil", position: [0, 1.6, 0] },
-  { id: "projects", label: "Projets mis en avant", position: [10, 1.6, 0] },
-  { id: "cv", label: "Mon CV", position: [-10, 1.6, 0] },
-  { id: "contact", label: "Contact", position: [0, 1.6, 12] },
+  { id: "projects", label: "Projets mis en avant", position: [8.5, 1.6, 0] },
+  { id: "cv", label: "Mon CV", position: [-8.5, 1.6, 0] },
+  { id: "contact", label: "Contact", position: [0, 6.4, 0] },
 ];
-const cvDestination: [number, number, number] = [-10, 1.6, 12];
 
 function Space() {
   const pointsRef = useRef<ThreePoints>(null);
@@ -22,8 +23,8 @@ function Space() {
       seed = (seed * 16807) % 2147483647;
       return (seed - 1) / 2147483646;
     };
-    for (let i = 0; i < 260; i += 1) {
-      positions.push((random() - 0.5) * 64, (random() - 0.5) * 28, (random() - 0.5) * 70 - 8);
+    for (let i = 0; i < 360; i += 1) {
+      positions.push((random() - 0.5) * 64, (random() - 0.5) * 32, (random() - 0.5) * 70 - 8);
     }
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new Float32BufferAttribute(positions, 3));
@@ -31,40 +32,43 @@ function Space() {
   }, []);
 
   useFrame(({ clock }) => {
-    // Gentle parallax drift makes the environment feel alive without competing with the content.
-    if (pointsRef.current) pointsRef.current.rotation.y = Math.sin(clock.getElapsedTime() * 0.08) * 0.025;
+    if (pointsRef.current) {
+      const time = clock.getElapsedTime();
+      pointsRef.current.rotation.y = Math.sin(time * 0.12) * 0.035;
+      pointsRef.current.rotation.x = Math.cos(time * 0.08) * 0.012;
+    }
   });
 
   return (
     <>
       <color attach="background" args={["#e9ebf3"]} />
-      <fog attach="fog" args={["#e9ebf3", 20, 58]} />
+      <fog attach="fog" args={["#e9ebf3", 24, 72]} />
       <ambientLight intensity={1.35} />
       <hemisphereLight args={["#ffffff", "#a9abc6", 1.1]} />
       <directionalLight position={[2, 7, 6]} intensity={1.7} />
       <pointLight position={[-8, 4, -4]} color="#b9b1f0" intensity={18} distance={26} />
       <points ref={pointsRef} geometry={points}>
-        <pointsMaterial color="#9b9bbd" size={0.035} transparent opacity={0.55} sizeAttenuation depthWrite={false} />
+        <pointsMaterial color="#9b9bbd" size={0.04} transparent opacity={0.62} sizeAttenuation depthWrite={false} />
       </points>
     </>
   );
 }
 
-function CameraJourney({ activeSection, cvDetail }: { activeSection: SectionId; cvDetail: boolean }) {
+function CameraJourney({ activeSection }: { activeSection: SectionId }) {
   const { camera } = useThree();
   const targetPosition = useRef(new Vector3(0, 1.6, 8));
   const targetLookAt = useRef(new Vector3(0, 1.6, 0));
   const currentLookAt = useRef(new Vector3(0, 1.6, 0));
 
   useEffect(() => {
-    const section = sections.find(({ id }) => id === activeSection) ?? sections[0];
-    const destination = activeSection === "cv" && cvDetail ? cvDestination : section.position;
+    const destination = sections.find(({ id }) => id === activeSection)?.position ?? sections[0].position;
     targetPosition.current.set(destination[0], destination[1], destination[2] + 8);
     targetLookAt.current.set(...destination);
-  }, [activeSection, cvDetail]);
+  }, [activeSection]);
 
   useFrame((_, delta) => {
-    const easing = 1 - Math.exp(-delta * 1.25);
+    // A deliberate, eased journey makes the fixed plaques visibly pass through the frame.
+    const easing = 1 - Math.exp(-delta * 0.72);
     camera.position.lerp(targetPosition.current, easing);
     currentLookAt.current.lerp(targetLookAt.current, easing);
     camera.lookAt(currentLookAt.current);
@@ -82,11 +86,12 @@ function SectionPlaque({ section, cvDetail, onNavigate, onCvDetail }: {
   if (section === "home") {
     return (
       <section className="glass-plaque hero-plaque" aria-label="Présentation">
+        <span className="plaque-eyebrow">Développeur web · React & TypeScript</span>
         <h1>Antoine Guglielmi</h1>
         <p className="hero-role">Développeur frontend</p>
         <p className="hero-copy">Je conçois des interfaces web soignées, accessibles et robustes, avec une attention particulière portée à l’expérience et aux détails.</p>
         <div className="hero-actions">
-          <button className="primary-link" onClick={() => onNavigate("projects")}>Voir mes projets <ArrowUpRight size={16} /></button>
+          <button className="primary-link" onClick={() => onNavigate("projects")}>Voir mes projets <ArrowUpRight size={18} /></button>
           <button className="quiet-link" onClick={() => onNavigate("contact")}>Me contacter</button>
         </div>
       </section>
@@ -96,6 +101,7 @@ function SectionPlaque({ section, cvDetail, onNavigate, onCvDetail }: {
   if (section === "projects") {
     return (
       <section className="glass-plaque projects-plaque" aria-label="Projets mis en avant">
+        <span className="plaque-eyebrow">Sélection</span>
         <h2>Projets mis en avant</h2>
         <div className="project-list">
           <article><h3>Tresor</h3><p>Un outil de gestion de trésorerie pensé pour les associations.</p></article>
@@ -109,14 +115,15 @@ function SectionPlaque({ section, cvDetail, onNavigate, onCvDetail }: {
   if (section === "cv") {
     return (
       <section className="glass-plaque cv-plaque" aria-label={cvDetail ? "Espace CV" : "Introduction au CV"}>
+        <span className="plaque-eyebrow">Parcours</span>
         {cvDetail ? <>
-          <button className="back-link" onClick={() => onCvDetail(false)}><ArrowLeft size={15} /> Retour à l’introduction</button>
+          <button className="back-link" onClick={() => onCvDetail(false)}><ArrowLeft size={17} /> Retour à l’introduction</button>
           <h2>Mon CV</h2>
           <p className="plaque-copy">Cet espace accueillera les plaques détaillées de mon parcours. Nous pourrons les construire ensuite.</p>
         </> : <>
           <h2>Mon parcours</h2>
           <p className="plaque-copy">Développeur frontend orienté React et TypeScript, je m’intéresse à l’architecture, aux systèmes de design et à l’accessibilité.</p>
-          <button className="primary-link" onClick={() => onCvDetail(true)}>Explorer mon CV <ArrowUpRight size={16} /></button>
+          <button className="primary-link" onClick={() => onCvDetail(true)}>Explorer mon CV <ArrowUpRight size={18} /></button>
         </>}
       </section>
     );
@@ -124,6 +131,7 @@ function SectionPlaque({ section, cvDetail, onNavigate, onCvDetail }: {
 
   return (
     <section className="glass-plaque contact-plaque" aria-label="Formulaire de contact">
+      <span className="plaque-eyebrow">Contact</span>
       <h2>Parlons de votre projet.</h2>
       <form className="contact-form" onSubmit={(event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -135,9 +143,9 @@ function SectionPlaque({ section, cvDetail, onNavigate, onCvDetail }: {
         <label>Nom<input name="name" autoComplete="name" placeholder="Votre nom" required /></label>
         <label>Email<input name="email" type="email" autoComplete="email" placeholder="vous@exemple.fr" required /></label>
         <label>Message<textarea name="message" rows={3} placeholder="Quelques mots sur votre projet…" required /></label>
-        <button className="primary-link" type="submit">Envoyer un message <Send size={15} /></button>
+        <button className="primary-link" type="submit">Envoyer un message <Send size={17} /></button>
       </form>
-      <a className="email-link" href="mailto:hello@antoine-g.com"><Mail size={15} /> hello@antoine-g.com</a>
+      <a className="email-link" href="mailto:hello@antoine-g.com"><Mail size={17} /> hello@antoine-g.com</a>
     </section>
   );
 }
@@ -149,33 +157,30 @@ const sectionPreviews: Record<SectionId, { title: string; copy: string }> = {
   contact: { title: "Contact", copy: "Parlons de votre prochain projet." },
 };
 
-const nearbySections: Record<SectionId, SectionId[]> = {
-  home: ["cv", "projects", "contact"],
-  projects: ["home", "contact", "cv"],
-  cv: ["contact", "home", "projects"],
-  contact: ["projects", "cv", "home"],
-};
-
-function NearbyPlaques({ activeSection, onNavigate }: {
+function WorldPlaque({ id, activeSection, cvDetail, onNavigate, onCvDetail }: {
+  id: SectionId;
   activeSection: SectionId;
+  cvDetail: boolean;
   onNavigate: (id: SectionId) => void;
+  onCvDetail: (value: boolean) => void;
 }) {
+  const section = sections.find((item) => item.id === id)!;
+  const isActive = activeSection === id;
+
   return (
-    <div className="nearby-plaques" aria-label="Sections à proximité">
-      {nearbySections[activeSection].map((id, index) => (
-        <button
-          className={`nearby-plaque nearby-plaque-${index + 1}`}
-          key={id}
-          onClick={() => onNavigate(id)}
-          aria-label={`Explorer la section ${sectionPreviews[id].title}`}
-        >
-          <span className="nearby-kicker">À proximité</span>
-          <strong>{sectionPreviews[id].title}</strong>
-          <span className="nearby-copy">{sectionPreviews[id].copy}</span>
-          <span className="nearby-open"><ArrowUpRight size={15} /></span>
-        </button>
-      ))}
-    </div>
+    <Html position={section.position} center zIndexRange={isActive ? [20, 30] : [1, 10]}>
+      <div className={`world-plaque ${isActive ? "is-active" : "is-nearby"}`}>
+        {!isActive && (
+          <button className="world-preview" onClick={() => onNavigate(id)} aria-label={`Rejoindre la section ${sectionPreviews[id].title}`}>
+            <span className="plaque-eyebrow">À proximité</span>
+            <strong>{sectionPreviews[id].title}</strong>
+            <span>{sectionPreviews[id].copy}</span>
+            <span className="preview-arrow"><ArrowUpRight size={20} /></span>
+          </button>
+        )}
+        {isActive && <SectionPlaque section={id} cvDetail={cvDetail} onNavigate={onNavigate} onCvDetail={onCvDetail} />}
+      </div>
+    </Html>
   );
 }
 
@@ -191,19 +196,18 @@ export default function App() {
   return (
     <main className={`site-shell section-${activeSection}`}>
       <div className="scene" aria-hidden="true">
-        <Canvas camera={{ position: [0, 1.6, 8], fov: 42 }} dpr={[1, 1.5]}>
+        <Canvas camera={{ position: [0, 1.6, 8], fov: 48 }} dpr={[1, 1.5]}>
           <Space />
-          <CameraJourney activeSection={activeSection} cvDetail={cvDetail} />
+          <CameraJourney activeSection={activeSection} />
+          {sections.map(({ id }) => (
+            <WorldPlaque key={id} id={id} activeSection={activeSection} cvDetail={cvDetail} onNavigate={navigateTo} onCvDetail={setCvDetail} />
+          ))}
         </Canvas>
       </div>
       <header className="topbar">
         <button className="brand" onClick={() => navigateTo("home")} aria-label="Retour à l’accueil">antoine-g<span>.</span></button>
-        <a className="source-link" href="https://github.com/AntoineGuglielmi" target="_blank" rel="noreferrer" aria-label="GitHub"><Github size={17} /></a>
+        <a className="source-link" href="https://github.com/AntoineGuglielmi" target="_blank" rel="noreferrer" aria-label="GitHub"><Github size={19} /></a>
       </header>
-      <div className="plaque-stage" key={activeSection + (cvDetail ? "-detail" : "")}>
-        <NearbyPlaques activeSection={activeSection} onNavigate={navigateTo} />
-        <SectionPlaque section={activeSection} cvDetail={cvDetail} onNavigate={navigateTo} onCvDetail={setCvDetail} />
-      </div>
       <nav className="navigation-plaque" aria-label="Navigation principale">
         <p className="navigation-title">Navigation</p>
         {sections.map(({ id, label }) => (
