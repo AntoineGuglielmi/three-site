@@ -67,8 +67,8 @@ function CameraJourney({ activeSection }: { activeSection: SectionId }) {
   }, [activeSection]);
 
   useFrame((_, delta) => {
-    // A deliberate, eased journey makes the fixed plaques visibly pass through the frame.
-    const easing = 1 - Math.exp(-delta * 2.6);
+    // Keep the camera journey responsive while preserving a clear sense of movement.
+    const easing = 1 - Math.exp(-delta * 6.5);
     camera.position.lerp(targetPosition.current, easing);
     currentLookAt.current.lerp(targetLookAt.current, easing);
     camera.lookAt(currentLookAt.current);
@@ -170,15 +170,13 @@ function WorldPlaque({ id, activeSection, cvDetail, onNavigate, onCvDetail }: {
   return (
     <Html position={section.position} center zIndexRange={isActive ? [1000, 1000] : [100, 100]}>
       <div className={`world-plaque ${isActive ? "is-active" : "is-nearby"}`}>
-        {!isActive && (
-          <button className="world-preview" onClick={() => onNavigate(id)} aria-label={`Rejoindre la section ${sectionPreviews[id].title}`}>
-            <span className="plaque-eyebrow">À proximité</span>
-            <strong>{sectionPreviews[id].title}</strong>
-            <span>{sectionPreviews[id].copy}</span>
-            <span className="preview-arrow"><ArrowUpRight size={20} /></span>
-          </button>
-        )}
-        {isActive && <SectionPlaque section={id} cvDetail={cvDetail} onNavigate={onNavigate} onCvDetail={onCvDetail} />}
+        <button className="world-preview" onClick={() => onNavigate(id)} aria-label={`Rejoindre la section ${sectionPreviews[id].title}`}>
+          <span className="plaque-eyebrow">À proximité</span>
+          <strong>{sectionPreviews[id].title}</strong>
+          <span>{sectionPreviews[id].copy}</span>
+          <span className="preview-arrow"><ArrowUpRight size={20} /></span>
+        </button>
+        <SectionPlaque section={id} cvDetail={cvDetail} onNavigate={onNavigate} onCvDetail={onCvDetail} />
       </div>
     </Html>
   );
