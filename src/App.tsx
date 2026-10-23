@@ -15,9 +15,9 @@ const sections: Section[] = [
   { id: "home", label: "Accueil", position: [0, 1.6, 0] },
   { id: "projects", label: "Projets mis en avant", position: [10, 1.6, 0] },
   { id: "cv", label: "Mon CV", position: [-10, 1.6, 0] },
-  { id: "contact", label: "Contact", position: [0, 1.6, -12] },
+  { id: "contact", label: "Contact", position: [0, 1.6, 12] },
 ];
-const cvDestination: [number, number, number] = [-10, 1.6, -12];
+const cvDestination: [number, number, number] = [-10, 1.6, 12];
 
 function GlassPlaque({
   section,
