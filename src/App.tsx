@@ -68,7 +68,7 @@ function CameraJourney({ activeSection }: { activeSection: SectionId }) {
 
   useFrame((_, delta) => {
     // A deliberate, eased journey makes the fixed plaques visibly pass through the frame.
-    const easing = 1 - Math.exp(-delta * 0.72);
+    const easing = 1 - Math.exp(-delta * 2.6);
     camera.position.lerp(targetPosition.current, easing);
     currentLookAt.current.lerp(targetLookAt.current, easing);
     camera.lookAt(currentLookAt.current);
@@ -168,7 +168,7 @@ function WorldPlaque({ id, activeSection, cvDetail, onNavigate, onCvDetail }: {
   const isActive = activeSection === id;
 
   return (
-    <Html position={section.position} center zIndexRange={isActive ? [20, 30] : [1, 10]}>
+    <Html position={section.position} center zIndexRange={isActive ? [1000, 1000] : [100, 100]}>
       <div className={`world-plaque ${isActive ? "is-active" : "is-nearby"}`}>
         {!isActive && (
           <button className="world-preview" onClick={() => onNavigate(id)} aria-label={`Rejoindre la section ${sectionPreviews[id].title}`}>
