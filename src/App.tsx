@@ -1,89 +1,156 @@
-import { ArrowUpRight, Github, Mail } from "lucide-react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { ArrowLeft, ArrowUpRight, Github, Mail, Send } from "lucide-react";
 import { Html } from "@react-three/drei";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { Vector3 } from "three";
 
-type SectionId = "home" | "projects" | "about";
+type SectionId = "home" | "projects" | "cv" | "contact";
 type Section = {
   id: SectionId;
   label: string;
   position: [number, number, number];
-  lookAt: [number, number, number];
 };
 
 const sections: Section[] = [
-  { id: "home", label: "Accueil", position: [0, 1.5, 8], lookAt: [0, 1.7, -1] },
-  { id: "projects", label: "Projets", position: [7, 1.5, 6], lookAt: [7, 1.7, -1] },
-  { id: "about", label: "À propos", position: [-7, 1.5, 6], lookAt: [-7, 1.7, -1] },
+  { id: "home", label: "Accueil", position: [0, 1.6, 0] },
+  { id: "projects", label: "Projets mis en avant", position: [10, 1.6, 0] },
+  { id: "cv", label: "Mon CV", position: [-10, 1.6, 0] },
+  { id: "contact", label: "Contact", position: [0, 1.6, -12] },
 ];
 
-function World({ activeSection }: { activeSection: SectionId }) {
+function GlassPlaque({
+  section,
+  onNavigate,
+  cvDetail,
+  onCvDetail,
+}: {
+  section: Section;
+  onNavigate: (id: SectionId) => void;
+  cvDetail: boolean;
+  onCvDetail: (value: boolean) => void;
+}) {
+  const position: [number, number, number] = [section.position[0], section.position[1], section.position[2]];
+  const goToProjects = () => onNavigate("projects");
+
+  return (
+    <Html position={position} center distanceFactor={10} zIndexRange={[10, 0]}>
+      {section.id === "home" && (
+        <section className="glass-plaque hero-plaque" aria-label="Présentation">
+          <h1>Antoine Guglielmi</h1>
+          <p className="hero-role">Développeur frontend</p>
+          <p className="hero-copy">
+            Je conçois des interfaces web soignées, accessibles et robustes, avec une attention particulière portée à l’expérience et aux détails.
+          </p>
+          <div className="hero-actions">
+            <button className="primary-link" onClick={goToProjects}>Voir mes projets <ArrowUpRight size={16} /></button>
+            <button className="quiet-link" onClick={() => onNavigate("contact")}>Me contacter</button>
+          </div>
+        </section>
+      )}
+
+      {section.id === "projects" && (
+        <section className="glass-plaque projects-plaque" aria-label="Projets mis en avant">
+          <h2>Projets mis en avant</h2>
+          <div className="project-list">
+            <article>
+              <h3>Tresor</h3>
+              <p>Un outil de gestion de trésorerie pensé pour les associations.</p>
+            </article>
+            <article>
+              <h3>LocProof</h3>
+              <p>Des références locatives, dans un parcours simple et fiable.</p>
+            </article>
+            <article>
+              <h3>Polariis</h3>
+              <p>Explorer de nouvelles façons de rendre le web plus accessible.</p>
+            </article>
+          </div>
+        </section>
+      )}
+
+      {section.id === "cv" && (
+        <section className="glass-plaque cv-plaque" aria-label="Introduction au CV">
+          {cvDetail ? (
+            <>
+              <button className="back-link" onClick={() => onCvDetail(false)}><ArrowLeft size={15} /> Retour</button>
+              <h2>Mon parcours</h2>
+              <p className="plaque-copy">Cette partie ouvrira sur un espace dédié à mon expérience, mes compétences et mes projets.</p>
+            </>
+          ) : (
+            <>
+              <h2>Mon parcours</h2>
+              <p className="plaque-copy">
+                Développeur frontend orienté React et TypeScript, je m’intéresse à l’architecture, aux systèmes de design et à l’accessibilité.
+              </p>
+              <button className="primary-link" onClick={() => onCvDetail(true)}>Explorer mon CV <ArrowUpRight size={16} /></button>
+            </>
+          )}
+        </section>
+      )}
+
+      {section.id === "contact" && (
+        <section className="glass-plaque contact-plaque" aria-label="Formulaire de contact">
+          <h2>Parlons de votre projet.</h2>
+          <form className="contact-form" onSubmit={(event: FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            const subject = encodeURIComponent(`Message depuis antoine-g.com — ${String(form.get("name"))}`);
+            const body = encodeURIComponent(`De : ${String(form.get("name"))}\nEmail : ${String(form.get("email"))}\n\n${String(form.get("message"))}`);
+            window.location.href = `mailto:hello@antoine-g.com?subject=${subject}&body=${body}`;
+          }}>
+            <label>Nom<input name="name" autoComplete="name" placeholder="Votre nom" required /></label>
+            <label>Email<input name="email" type="email" autoComplete="email" placeholder="vous@exemple.fr" required /></label>
+            <label>Message<textarea name="message" rows={3} placeholder="Quelques mots sur votre projet…" required /></label>
+            <button className="primary-link" type="submit">Envoyer un message <Send size={15} /></button>
+          </form>
+          <a className="email-link" href="mailto:hello@antoine-g.com"><Mail size={15} /> hello@antoine-g.com</a>
+        </section>
+      )}
+    </Html>
+  );
+}
+
+function World({
+  activeSection,
+  onNavigate,
+  cvDetail,
+  onCvDetail,
+}: {
+  activeSection: SectionId;
+  onNavigate: (id: SectionId) => void;
+  cvDetail: boolean;
+  onCvDetail: (value: boolean) => void;
+}) {
   const { camera } = useThree();
-  const lookAt = useRef(new Vector3(...sections[0].lookAt));
+  const targetPosition = useRef(new Vector3(0, 1.6, 8));
+  const targetLookAt = useRef(new Vector3(...sections[0].position));
 
   useEffect(() => {
     const section = sections.find(({ id }) => id === activeSection) ?? sections[0];
-    lookAt.current.set(...section.lookAt);
+    targetPosition.current.set(section.position[0], section.position[1], section.position[2] + 8);
+    targetLookAt.current.set(...section.position);
   }, [activeSection]);
 
   useFrame((_, delta) => {
-    const section = sections.find(({ id }) => id === activeSection) ?? sections[0];
-    camera.position.lerp(new Vector3(...section.position), 1 - Math.exp(-delta * 1.6));
-    camera.lookAt(lookAt.current);
+    camera.position.lerp(targetPosition.current, 1 - Math.exp(-delta * 1.7));
+    camera.lookAt(targetLookAt.current);
   });
 
   return (
     <>
-      <color attach="background" args={["#edf0f6"]} />
-      <fog attach="fog" args={["#edf0f6", 18, 38]} />
-      <ambientLight intensity={1.8} />
-      <hemisphereLight args={["#ffffff", "#c9c9dc", 1.1]} />
-      <directionalLight position={[4, 8, 5]} intensity={1.6} color="#fffaf5" />
-      <pointLight position={[0, 4, -2]} intensity={12} distance={18} color="#c8c0f2" />
-      <pointLight position={[7, 4, -2]} intensity={10} distance={15} color="#c1e4da" />
-      <pointLight position={[-7, 4, -2]} intensity={10} distance={15} color="#f1d4c9" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, -3]}>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial color="#e2e6f0" roughness={1} />
-      </mesh>
-
+      <color attach="background" args={["#e9ebf3"]} />
+      <fog attach="fog" args={["#e9ebf3", 24, 60]} />
+      <ambientLight intensity={1.6} />
+      <hemisphereLight args={["#ffffff", "#b8bad0", 1.1]} />
+      <directionalLight position={[2, 5, 6]} intensity={1.4} color="#fffaf6" />
       {sections.map((section) => (
-        <Html key={section.id} position={[...section.lookAt.slice(0, 2), section.lookAt[2]] as [number, number, number]} center>
-          {section.id === "home" && (
-            <section className="content-panel home-panel" aria-label="Accueil">
-              <p className="eyebrow"><span className="status-dot" /> Développeur frontend · React & TypeScript</p>
-              <h1>Le web, avec<br /><em>un peu de relief.</em></h1>
-              <p className="lede">J’aime concevoir des interfaces soignées, des systèmes clairs et des expériences qui ont quelque chose à raconter.</p>
-              <button className="text-link" onClick={() => window.dispatchEvent(new CustomEvent("portfolio:navigate", { detail: "projects" }))}>
-                Découvrir les projets <ArrowUpRight size={16} />
-              </button>
-            </section>
-          )}
-          {section.id === "projects" && (
-            <section className="content-panel projects-panel" aria-label="Projets">
-              <p className="eyebrow">Sélection</p>
-              <h2>Des idées qui<br /><em>prennent forme.</em></h2>
-              <div className="project-list">
-                <article><h3>Tresor</h3><p>Un outil de gestion de trésorerie pensé pour les associations.</p><span>Next.js · TypeScript</span></article>
-                <article><h3>LocProof</h3><p>Un service de références locatives conçu pour être simple et fiable.</p><span>React · Produit</span></article>
-                <article><h3>Polariis</h3><p>Explorer de nouvelles façons de rendre le web plus accessible.</p><span>Accessibilité · IA</span></article>
-              </div>
-            </section>
-          )}
-          {section.id === "about" && (
-            <section className="content-panel about-panel" aria-label="À propos">
-              <p className="eyebrow">À propos</p>
-              <h2>Du code solide.<br /><em>Une expérience sensible.</em></h2>
-              <p className="lede">Développeur frontend orienté React et TypeScript, je m’intéresse autant à l’architecture et à l’accessibilité qu’aux détails d’interaction.</p>
-              <div className="skills"><span>React</span><span>TypeScript</span><span>Next.js</span><span>Design systems</span><span>Accessibilité</span></div>
-              <div className="contact-links">
-                <a href="mailto:hello@antoine-g.com"><Mail size={15} /> Me contacter</a>
-                <a href="https://github.com/AntoineGuglielmi" target="_blank" rel="noreferrer"><Github size={15} /> GitHub</a>
-              </div>
-            </section>
-          )}
-        </Html>
+        <GlassPlaque
+          key={section.id}
+          section={section}
+          onNavigate={onNavigate}
+          cvDetail={cvDetail}
+          onCvDetail={onCvDetail}
+        />
       ))}
     </>
   );
@@ -91,38 +158,50 @@ function World({ activeSection }: { activeSection: SectionId }) {
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<SectionId>("home");
+  const [cvDetail, setCvDetail] = useState(false);
 
-  useEffect(() => {
-    const handleNavigate = (event: Event) => {
-      const section = (event as CustomEvent<SectionId>).detail;
-      if (sections.some(({ id }) => id === section)) setActiveSection(section);
-    };
-    window.addEventListener("portfolio:navigate", handleNavigate);
-    return () => window.removeEventListener("portfolio:navigate", handleNavigate);
-  }, []);
+  const navigateTo = (section: SectionId) => {
+    setCvDetail(false);
+    setActiveSection(section);
+  };
 
   return (
     <main className="site-shell">
-      <div className="scene" aria-label="Portfolio en trois dimensions">
-        <Canvas camera={{ position: sections[0].position, fov: 48 }} dpr={[1, 1.5]}>
-          <Suspense fallback={null}><World activeSection={activeSection} /></Suspense>
+      <div className="scene" aria-label="Portfolio immersif en trois dimensions">
+        <Canvas camera={{ position: [0, 1.6, 8], fov: 42 }} dpr={[1, 1.5]}>
+          <Suspense fallback={null}>
+            <World
+              activeSection={activeSection}
+              onNavigate={navigateTo}
+              cvDetail={cvDetail}
+              onCvDetail={setCvDetail}
+            />
+          </Suspense>
         </Canvas>
       </div>
 
       <header className="topbar">
-        <button className="brand" onClick={() => setActiveSection("home")} aria-label="Retour à l’accueil">antoine-g<span>.</span></button>
-        <a className="source-link" href="https://github.com/AntoineGuglielmi/three-site" target="_blank" rel="noreferrer">Code source <Github size={15} /></a>
+        <button className="brand" onClick={() => navigateTo("home")} aria-label="Retour à l’accueil">antoine-g<span>.</span></button>
+        <a className="source-link" href="https://github.com/AntoineGuglielmi" target="_blank" rel="noreferrer" aria-label="GitHub"><Github size={17} /></a>
       </header>
 
-      <nav className="section-nav" aria-label="Navigation principale">
+      <nav className="navigation-plaque" aria-label="Navigation principale">
+        <p className="navigation-title">Navigation</p>
         {sections.map(({ id, label }) => (
-          <button key={id} className={activeSection === id ? "active" : ""} aria-current={activeSection === id ? "page" : undefined} onClick={() => setActiveSection(id)}>
-            <span className="nav-indicator" />{label}<ArrowUpRight size={14} />
+          <button
+            key={id}
+            className={activeSection === id ? "nav-item active" : "nav-item"}
+            aria-current={activeSection === id ? "page" : undefined}
+            onClick={() => navigateTo(id)}
+          >
+            <span className="nav-dot" />
+            <span>{label}</span>
+            {activeSection === id && <span className="here-label">Ici</span>}
           </button>
         ))}
       </nav>
 
-      <div className="bottom-note">Un portfolio à explorer, simplement.</div>
+      <div className="ambient-note">Un espace à explorer</div>
     </main>
   );
 }
