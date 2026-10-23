@@ -195,7 +195,7 @@ export default function App() {
 
   return (
     <main className={`site-shell section-${activeSection}`}>
-      <div className="scene" aria-hidden="true">
+      <div className="scene">
         <Canvas camera={{ position: [0, 1.6, 8], fov: 48 }} dpr={[1, 1.5]}>
           <Space />
           <CameraJourney activeSection={activeSection} />
