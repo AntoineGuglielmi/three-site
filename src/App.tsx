@@ -266,7 +266,7 @@ function ThreeAxisCameraControls({
         saveCameraView(camera.position, target, roll)
       } else if (rolling || event.shiftKey) {
         rolling = true
-        roll += dx * 0.006
+        roll += dx * 0.003
         syncSpherical()
         camera.lookAt(target)
         camera.rotateZ(roll)
@@ -274,10 +274,10 @@ function ThreeAxisCameraControls({
         saveCameraView(camera.position, target, roll)
       } else {
         syncSpherical()
-        spherical.theta -= dx * 0.006
+        spherical.theta -= dx * 0.003
         spherical.phi = Math.max(
           0.08,
-          Math.min(Math.PI - 0.08, spherical.phi - dy * 0.006),
+          Math.min(Math.PI - 0.08, spherical.phi - dy * 0.003),
         )
         offset.setFromSpherical(spherical)
         camera.position.copy(target).add(offset)
