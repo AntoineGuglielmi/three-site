@@ -86,6 +86,50 @@ h1 {
   pointer-events: auto;
 }
 
+.mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgb(68 69 63 / 16%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 72%);
+}
+
+.mode-switch button {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 5px;
+  color: #686960;
+  background: transparent;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mode-switch button:hover {
+  color: #30362f;
+  background: rgb(68 69 63 / 7%);
+}
+
+.mode-switch button.is-active {
+  color: #fff;
+  background: #414d43;
+}
+
+.surface-resize-handle {
+  display: block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid #414d43;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
 .add-surface-button {
   border: 1px solid #414d43;
   border-radius: 6px;
