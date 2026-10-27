@@ -67,6 +67,7 @@ function SurfaceGrid() {
             surface.height / sceneConfig.pixelsPerUnit,
           ]}
           radius={surface.radius ?? sceneConfig.cornerRadius}
+          transparent
           toneMapped={false}
         />
       ))}
