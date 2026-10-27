@@ -35,7 +35,11 @@ export const surfaces: Surface[][] = [
 
 ## Caméra
 
-Dans le même fichier, `sceneConfig.camera.position` définit la position initiale de la caméra, `target` son point de visée et `fov` son champ de vision. Tu peux aussi tourner la vue à la souris et zoomer à la molette.
+Dans le même fichier, `sceneConfig.camera.position` définit la position initiale de la caméra, `target` son point de visée et `fov` son champ de vision.
+
+- Glisser avec le bouton gauche pour orbiter autour des surfaces.
+- Maintenir `Maj` et glisser pour incliner la caméra autour de l'axe de vue.
+- Utiliser la molette pour zoomer.
 
 ## Ignorés par Git
 
