@@ -14,6 +14,51 @@ type PositionedSurface = {
 
 type ControlsRef = RefObject<ComponentRef<typeof OrbitControls> | null>
 
+type CameraView = {
+  position: [number, number, number]
+  target: [number, number, number]
+  roll: number
+}
+
+const CAMERA_VIEW_KEY = 'surface-camera-view'
+
+function readCameraView(): CameraView | null {
+  try {
+    const stored = localStorage.getItem(CAMERA_VIEW_KEY)
+    if (!stored) return null
+    const view = JSON.parse(stored) as CameraView
+    if (
+      !Array.isArray(view.position) ||
+      view.position.length !== 3 ||
+      !view.position.every(Number.isFinite) ||
+      !Array.isArray(view.target) ||
+      view.target.length !== 3 ||
+      !view.target.every(Number.isFinite) ||
+      !Number.isFinite(view.roll)
+    ) return null
+    return view
+  } catch {
+    return null
+  }
+}
+
+function saveCameraView(
+  position: Vector3,
+  target: Vector3,
+  roll: number,
+) {
+  try {
+    const view: CameraView = {
+      position: position.toArray() as [number, number, number],
+      target: target.toArray() as [number, number, number],
+      roll,
+    }
+    localStorage.setItem(CAMERA_VIEW_KEY, JSON.stringify(view))
+  } catch {
+    // The scene remains usable when storage is unavailable.
+  }
+}
+
 function getPositionedSurfaces(): PositionedSurface[] {
   const unit = sceneConfig.pixelsPerUnit
   const columnGap = sceneConfig.columnGap / unit
@@ -124,8 +169,12 @@ function SceneExporter({ onReady }: { onReady: ExportSceneSetter }) {
 /** Drag to orbit, Shift + drag to roll, or Space + drag to pan the camera. */
 function ThreeAxisCameraControls({
   controlsRef,
+  initialRoll,
+  rollRef,
 }: {
   controlsRef: ControlsRef
+  initialRoll: number
+  rollRef: RefObject<number>
 }) {
   const { camera, gl, size } = useThree()
 
@@ -143,7 +192,8 @@ function ThreeAxisCameraControls({
     let rolling = false
     let panning = false
     let spacePressed = false
-    let roll = 0
+    let roll = initialRoll
+    rollRef.current = roll
 
     const syncSpherical = () => {
       target.copy(controlsRef.current?.target ?? initialTarget)
@@ -219,6 +269,8 @@ function ThreeAxisCameraControls({
         syncSpherical()
         camera.lookAt(target)
         camera.rotateZ(roll)
+        rollRef.current = roll
+        saveCameraView(camera.position, target, roll)
       } else {
         syncSpherical()
         spherical.theta -= dx * 0.006
@@ -230,6 +282,8 @@ function ThreeAxisCameraControls({
         camera.position.copy(target).add(offset)
         camera.lookAt(target)
         camera.rotateZ(roll)
+        rollRef.current = roll
+        saveCameraView(camera.position, target, roll)
       }
     }
 
@@ -259,14 +313,16 @@ function ThreeAxisCameraControls({
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
     }
-  }, [camera, controlsRef, gl, size.height])
+  }, [camera, controlsRef, gl, initialRoll, rollRef, size.height])
 
   return null
 }
 
 export default function App() {
   const { camera } = sceneConfig
+  const initialView = useMemo(readCameraView, [])
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
+  const rollRef = useRef(initialView?.roll ?? 0)
   const [exportScene, setExportScene] = useState<ExportScene | null>(null)
   const handleExportReady = useCallback<ExportSceneSetter>((exporter) => {
     setExportScene(() => exporter)
@@ -299,7 +355,7 @@ export default function App() {
       >
         <Canvas
           camera={{
-            position: camera.position,
+            position: initialView?.position ?? camera.position,
             fov: camera.fov,
             near: 0.1,
             far: 100,
@@ -313,12 +369,26 @@ export default function App() {
           />
           <ambientLight intensity={2} />
           <SurfaceGrid />
-          <ThreeAxisCameraControls controlsRef={controlsRef} />
+          <ThreeAxisCameraControls
+            controlsRef={controlsRef}
+            initialRoll={initialView?.roll ?? 0}
+            rollRef={rollRef}
+          />
           <SceneExporter onReady={handleExportReady} />
           <OrbitControls
             ref={controlsRef}
             makeDefault
-            target={camera.target}
+            target={initialView?.target ?? camera.target}
+            onChange={() => {
+              const target = controlsRef.current?.target
+              if (target) {
+                saveCameraView(
+                  controlsRef.current?.object.position ?? new Vector3(),
+                  target,
+                  rollRef.current,
+                )
+              }
+            }}
             enableRotate={false}
             enablePan={false}
             enableZoom
