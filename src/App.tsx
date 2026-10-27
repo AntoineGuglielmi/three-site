@@ -87,10 +87,13 @@ function SceneExporter({ onReady }: { onReady: ExportSceneSetter }) {
     const previousClearAlpha = gl.getClearAlpha()
     const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
 
-    // Render against an actual white scene background for JPG so transparent
-    // pixels from rounded image corners are composited before JPEG encoding.
-    scene.background = format === 'jpg' ? new Color(0xffffff) : null
-    gl.setClearColor(format === 'png' ? 0x000000 : 0xffffff, format === 'png' ? 0 : 1)
+    // Composite the rounded image corners against an opaque background before
+    // encoding. PNG uses the scene color; JPG uses white.
+    const backgroundColor = new Color(
+      format === 'png' ? sceneConfig.background : 0xffffff,
+    )
+    scene.background = backgroundColor
+    gl.setClearColor(backgroundColor, 1)
     gl.render(scene, camera)
 
     gl.domElement.toBlob((blob) => {
