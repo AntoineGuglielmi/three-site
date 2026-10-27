@@ -119,7 +119,7 @@ function createShadowTexture(width: number, height: number, radius: number) {
   const y = padding
   const w = canvas.width - padding * 2
   const h = canvas.height - padding * 2
-  const r = Math.min(radius * Math.min(w, h), w / 2, h / 2)
+  const r = Math.min(radius * sceneConfig.pixelsPerUnit * scale, w / 2, h / 2)
 
   context.fillStyle = '#000'
   context.shadowColor = 'rgba(0, 0, 0, 0.24)'
