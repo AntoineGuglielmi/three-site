@@ -1,15 +1,20 @@
-import { Image, OrbitControls } from '@react-three/drei'
+import { Html, Image, OrbitControls } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef, RefObject } from 'react'
-import { CanvasTexture, Color, SRGBColorSpace, Spherical, Vector3 } from 'three'
+import { Color, Plane, Raycaster, Spherical, Vector2, Vector3 } from 'three'
 import type { Surface } from './config/surfaces'
 import { sceneConfig, surfaces } from './config/surfaces'
 
-type PositionedSurface = {
-  surface: Surface
-  position: [number, number, number]
-  key: string
+type EditableSurface = {
+  id: string
+  width: number
+  height: number
+  x: number
+  y: number
+  src: string
+  radius: number
+  alt?: string
 }
 
 type ControlsRef = RefObject<ComponentRef<typeof OrbitControls> | null>
@@ -68,7 +73,7 @@ function saveCameraView(position: Vector3, target: Vector3, roll: number) {
   }
 }
 
-function getPositionedSurfaces(): PositionedSurface[] {
+function getPositionedSurfaces(): EditableSurface[] {
   const unit = sceneConfig.pixelsPerUnit
   const columnGap = sceneConfig.columnGap / unit
   const rowGap = sceneConfig.rowGap / unit
@@ -86,17 +91,22 @@ function getPositionedSurfaces(): PositionedSurface[] {
       row.reduce((sum, item) => sum + item.width / unit, 0) +
       Math.max(0, row.length - 1) * columnGap
     let xCursor = -rowWidth / 2
-    const y = yCursor - rowHeight / 2
 
     const positioned = row.map((surface, surfaceIndex) => {
       const width = surface.width / unit
+      const height = surface.height / unit
       const x = xCursor + width / 2
       xCursor += width + columnGap
 
       return {
-        surface,
-        position: [x, y, 0] as [number, number, number],
-        key: `${rowIndex}-${surfaceIndex}-${surface.src}`,
+        id: `surface-${rowIndex}-${surfaceIndex}`,
+        width,
+        height,
+        x,
+        y: yCursor - rowHeight / 2,
+        src: surface.src,
+        radius: surface.radius ?? sceneConfig.cornerRadius,
+        alt: surface.alt,
       }
     })
 
@@ -105,107 +115,208 @@ function getPositionedSurfaces(): PositionedSurface[] {
   })
 }
 
-function createShadowTexture(width: number, height: number, radius: number) {
-  const canvas = document.createElement('canvas')
-  const scale = 2
-  const padding = 48
-  canvas.width = Math.max(1, Math.round(width * sceneConfig.pixelsPerUnit * scale)) + padding * 2
-  canvas.height = Math.max(1, Math.round(height * sceneConfig.pixelsPerUnit * scale)) + padding * 2
-
-  const context = canvas.getContext('2d')
-  if (!context) return null
-
-  const x = padding
-  const y = padding
-  const w = canvas.width - padding * 2
-  const h = canvas.height - padding * 2
-  const r = Math.min(radius * sceneConfig.pixelsPerUnit * scale, w / 2, h / 2)
-
-  context.fillStyle = '#000'
-  context.shadowColor = 'rgba(0, 0, 0, 0.24)'
-  context.shadowBlur = 24
-  context.shadowOffsetX = 0
-  context.shadowOffsetY = 12
-  context.beginPath()
-  context.roundRect(x, y, w, h, r)
-  context.fill()
-
-  // Keep only the blurred shadow, not the opaque shape underneath the image.
-  context.shadowColor = 'transparent'
-  context.shadowBlur = 0
-  context.shadowOffsetY = 0
-  context.globalCompositeOperation = 'destination-out'
-  context.beginPath()
-  context.roundRect(x, y, w, h, r)
-  context.fill()
-
-  const texture = new CanvasTexture(canvas)
-  texture.colorSpace = SRGBColorSpace
-  return texture
+type DragState = {
+  id: string
+  mode: 'move' | 'resize'
+  offsetX: number
+  offsetY: number
+  cornerX?: -1 | 1
+  cornerY?: -1 | 1
+  anchorX?: number
+  anchorY?: number
 }
 
-function SurfaceShadow({
-  surface,
-  position,
+function SurfaceGrid({
+  items,
+  setItems,
+  selectedId,
+  setSelectedId,
+  onDelete,
 }: {
-  surface: Surface
-  position: [number, number, number]
+  items: EditableSurface[]
+  setItems: React.Dispatch<React.SetStateAction<EditableSurface[]>>
+  selectedId: string | null
+  setSelectedId: (id: string | null) => void
+  onDelete: (id: string) => void
 }) {
-  const width = surface.width / sceneConfig.pixelsPerUnit
-  const height = surface.height / sceneConfig.pixelsPerUnit
-  const radius = surface.radius ?? sceneConfig.cornerRadius
-  const texture = useMemo(
-    () => createShadowTexture(width, height, radius),
-    [height, radius, width],
-  )
+  const { camera, gl } = useThree()
+  const dragRef = useRef<DragState | null>(null)
+  const raycaster = useMemo(() => new Raycaster(), [])
+  const pointer = useMemo(() => new Vector2(), [])
+  const plane = useMemo(() => new Plane(new Vector3(0, 0, 1), 0), [])
+  const intersection = useMemo(() => new Vector3(), [])
 
-  useEffect(() => () => texture?.dispose(), [texture])
-  if (!texture) return null
+  const getPlanePoint = useCallback((clientX: number, clientY: number) => {
+    const rect = gl.domElement.getBoundingClientRect()
+    pointer.set(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    )
+    raycaster.setFromCamera(pointer, camera)
+    return raycaster.ray.intersectPlane(plane, intersection)?.clone() ?? null
+  }, [camera, gl, intersection, plane, pointer, raycaster])
 
-  const padding = 48 / 2
-  const shadowWidth = width + padding * 2 / sceneConfig.pixelsPerUnit
-  const shadowHeight = height + padding * 2 / sceneConfig.pixelsPerUnit
+  const startDrag = useCallback((
+    event: Parameters<NonNullable<React.ComponentProps<typeof Image>['onPointerDown']>>[0],
+    item: EditableSurface,
+    mode: 'move' | 'resize',
+    cornerX?: -1 | 1,
+    cornerY?: -1 | 1,
+  ) => {
+    event.stopPropagation()
+    setSelectedId(item.id)
+    const point = event.point
+    dragRef.current = {
+      id: item.id,
+      mode,
+      offsetX: item.x - point.x,
+      offsetY: item.y - point.y,
+      cornerX,
+      cornerY,
+      anchorX: cornerX ? item.x - cornerX * item.width / 2 : undefined,
+      anchorY: cornerY ? item.y - cornerY * item.height / 2 : undefined,
+    }
+    gl.domElement.style.cursor = mode === 'move' ? 'grabbing' : 'nwse-resize'
+  }, [gl, setSelectedId])
 
-  return (
-    <mesh
-      position={[position[0], position[1] - 0.035, position[2] - 0.01]}
-      renderOrder={0}
-    >
-      <planeGeometry args={[shadowWidth, shadowHeight]} />
-      <meshBasicMaterial
-        map={texture}
-        transparent
-        opacity={0.8}
-        depthWrite={false}
-        toneMapped={false}
-      />
-    </mesh>
-  )
-}
+  useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag) return
+      const point = getPlanePoint(event.clientX, event.clientY)
+      if (!point) return
 
-function SurfaceGrid() {
-  const items = useMemo(getPositionedSurfaces, [])
+      setItems((current) => current.map((item) => {
+        if (item.id !== drag.id) return item
+        if (drag.mode === 'move') {
+          return {
+            ...item,
+            x: point.x + drag.offsetX,
+            y: point.y + drag.offsetY,
+          }
+        }
+
+        const width = Math.max(0.25, (point.x - (drag.anchorX ?? 0)) * (drag.cornerX ?? 1))
+        const height = Math.max(0.25, (point.y - (drag.anchorY ?? 0)) * (drag.cornerY ?? 1))
+        return {
+          ...item,
+          width,
+          height,
+          x: (drag.anchorX ?? 0) + (drag.cornerX ?? 1) * width / 2,
+          y: (drag.anchorY ?? 0) + (drag.cornerY ?? 1) * height / 2,
+        }
+      }))
+    }
+
+    const onPointerUp = () => {
+      dragRef.current = null
+      gl.domElement.style.cursor = ''
+    }
+
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerUp)
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerUp)
+    }
+  }, [getPlanePoint, gl, setItems])
+
+  const updateImage = useCallback((id: string, file: File | undefined) => {
+    if (!file || !file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return
+      setItems((current) => current.map((item) =>
+        item.id === id ? { ...item, src: reader.result as string, alt: file.name } : item,
+      ))
+    }
+    reader.readAsDataURL(file)
+  }, [setItems])
 
   return (
     <group>
-      {items.map(({ surface, position, key }) => (
-        <group key={key}>
-          <SurfaceShadow surface={surface} position={position} />
-        <Image
-          key={key}
-          url={surface.src}
-          name={surface.alt ?? surface.src}
-          position={position}
-          scale={[
-            surface.width / sceneConfig.pixelsPerUnit,
-            surface.height / sceneConfig.pixelsPerUnit,
-          ]}
-          radius={surface.radius ?? sceneConfig.cornerRadius}
-          transparent
-          toneMapped={false}
-        />
-        </group>
-      ))}
+      {items.map((item) => {
+        const position: [number, number, number] = [item.x, item.y, 0]
+        const selected = selectedId === item.id
+        const cornerPositions = [
+          { x: -1 as const, y: -1 as const },
+          { x: -1 as const, y: 1 as const },
+          { x: 1 as const, y: -1 as const },
+          { x: 1 as const, y: 1 as const },
+        ]
+
+        return (
+          <group key={item.id}>
+            {item.src ? (
+              <Image
+                url={item.src}
+                name={item.alt ?? item.src}
+                position={position}
+                scale={[item.width, item.height]}
+                radius={item.radius}
+                transparent
+                toneMapped={false}
+                onPointerDown={(event) => startDrag(event, item, 'move')}
+                onPointerOver={() => { if (!dragRef.current) gl.domElement.style.cursor = 'grab' }}
+                onPointerOut={() => { if (!dragRef.current) gl.domElement.style.cursor = '' }}
+              />
+            ) : (
+              <mesh
+                position={position}
+                onPointerDown={(event) => startDrag(event, item, 'move')}
+              >
+                <planeGeometry args={[item.width, item.height]} />
+                <meshBasicMaterial color="#e6e5df" />
+              </mesh>
+            )}
+
+            {selected && cornerPositions.map(({ x, y }) => (
+              <mesh
+                key={`${x}-${y}`}
+                position={[item.x + x * item.width / 2, item.y + y * item.height / 2, 0.08]}
+                onPointerDown={(event) => startDrag(event, item, 'resize', x, y)}
+                onPointerOver={() => { gl.domElement.style.cursor = 'nwse-resize' }}
+                onPointerOut={() => { if (!dragRef.current) gl.domElement.style.cursor = '' }}
+              >
+                <circleGeometry args={[0.065, 20]} />
+                <meshBasicMaterial color="#ffffff" depthTest={false} />
+              </mesh>
+            ))}
+
+            <Html
+              position={[item.x + item.width / 2, item.y + item.height / 2, 0.12]}
+              transform={false}
+              zIndexRange={[20, 0]}
+              style={{ pointerEvents: 'auto' }}
+            >
+              <div className="surface-toolbar" onPointerDown={(event) => event.stopPropagation()}>
+                <label className="surface-action" title="Choisir une image">
+                  Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    aria-label="Choisir une image pour cette surface"
+                    onChange={(event) => {
+                      updateImage(item.id, event.currentTarget.files?.[0])
+                      event.currentTarget.value = ''
+                    }}
+                  />
+                </label>
+                <button type="button" className="surface-action surface-delete" onClick={() => onDelete(item.id)}>
+                  Supprimer
+                </button>
+              </div>
+            </Html>
+            {!item.src && (
+              <Html position={position} center transform={false} zIndexRange={[10, 0]}>
+                <span className="surface-placeholder">Choisir une image</span>
+              </Html>
+            )}
+          </group>
+        )
+      })}
     </group>
   )
 }
@@ -426,8 +537,8 @@ export default function App() {
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const rollRef = useRef(initialView?.roll ?? 0)
   const [exportScene, setExportScene] = useState<ExportScene | null>(null)
-  const [backgroundColor, setBackgroundColor] = useState(readBackgroundColor)
-  const handleExportReady = useCallback<ExportSceneSetter>((exporter) => {
+  const [backgroundColor, setBackgroundColor] = useState(readBackgroundColor)\n  const [items, setItems] = useState<EditableSurface[]>(getPositionedSurfaces)\n  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const addSurface = useCallback(() => {\n    const id = `surface-${crypto.randomUUID()}`\n    setItems((current) => [...current, { id, width: 4.2, height: 3, x: 0, y: 0, src: '', radius: sceneConfig.cornerRadius }])\n    setSelectedId(id)\n  }, [])\n  const deleteSurface = useCallback((id: string) => {\n    setItems((current) => current.filter((item) => item.id !== id))\n    setSelectedId((current) => current === id ? null : current)\n  }, [])\n  const handleExportReady = useCallback<ExportSceneSetter>((exporter) => {
     setExportScene(() => exporter)
   }, [])
 
@@ -451,7 +562,7 @@ export default function App() {
           glissant pour déplacer la vue, et utilise la molette pour zoomer.
         </p>
         <div className="header-actions">
-          <label className="background-control">
+          <button type="button" className="add-surface-button" onClick={addSurface}>+ Surface</button>\n          <label className="background-control">
             <span>Fond</span>
             <input
               type="color"
@@ -503,7 +614,7 @@ export default function App() {
             args={[backgroundColor]}
           />
           <ambientLight intensity={2} />
-          <SurfaceGrid />
+          <SurfaceGrid items={items} setItems={setItems} selectedId={selectedId} setSelectedId={setSelectedId} onDelete={deleteSurface} />
           <ThreeAxisCameraControls
             controlsRef={controlsRef}
             initialRoll={initialView?.roll ?? 0}
