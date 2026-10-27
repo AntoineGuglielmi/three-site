@@ -115,6 +115,16 @@ function getPositionedSurfaces(): EditableSurface[] {
   })
 }
 
+function ActionIcon({ name }: { name: 'more' | 'trash' | 'image' }) {
+  if (name === 'more') {
+    return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /><circle cx="19" cy="12" r="1.6" fill="currentColor" /></svg>
+  }
+  if (name === 'trash') {
+    return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3" /></svg>
+  }
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9" r="1.5" /><path d="m21 15-5-5L5 20" /></svg>
+}
+
 type DragState = {
   id: string
   mode: 'move' | 'resize'
@@ -142,7 +152,7 @@ function SurfaceGrid({
   onDelete: (id: string) => void
 }) {
   const { camera, gl } = useThree()
-  const dragRef = useRef<DragState | null>(null)
+  const dragRef = useRef<DragState | null>(null)\n  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const raycaster = useMemo(() => new Raycaster(), [])
   const pointer = useMemo(() => new Vector2(), [])
   const plane = useMemo(() => new Plane(new Vector3(0, 0, 1), 0), [])
@@ -310,27 +320,51 @@ function SurfaceGrid({
 
             {mode === 'edit' && (
               <Html
-                position={[item.x + item.width / 2, item.y + item.height / 2, 0.12]}
+                position={[item.x + item.width / 2 - 0.18, item.y + item.height / 2 - 0.18, 0.12]}
                 transform={false}
                 zIndexRange={[20, 0]}
                 style={{ pointerEvents: 'auto' }}
               >
-                <div className="surface-toolbar" onPointerDown={(event) => event.stopPropagation()}>
-                  <label className="surface-action" title="Choisir une image">
-                    Image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      aria-label="Choisir une image pour cette surface"
-                      onChange={(event) => {
-                        updateImage(item.id, event.currentTarget.files?.[0])
-                        event.currentTarget.value = ''
-                      }}
-                    />
-                  </label>
-                  <button type="button" className="surface-action surface-delete" onClick={() => onDelete(item.id)}>
-                    Supprimer
+                <div className="surface-context" onPointerDown={(event) => event.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="surface-menu-trigger"
+                    aria-label={openMenuId === item.id ? 'Fermer le menu de la surface' : 'Ouvrir le menu de la surface'}
+                    aria-expanded={openMenuId === item.id}
+                    title="Options de la surface"
+                    onClick={() => setOpenMenuId((current) => current === item.id ? null : item.id)}
+                  >
+                    <ActionIcon name="more" />
                   </button>
+                  {openMenuId === item.id && (
+                    <div className="surface-context-menu" role="group" aria-label="Actions de la surface">
+                      <label className="surface-menu-action" title="Choisir une image">
+                        <ActionIcon name="image" />
+                        <span>Image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          aria-label="Choisir une image pour cette surface"
+                          onChange={(event) => {
+                            updateImage(item.id, event.currentTarget.files?.[0])
+                            event.currentTarget.value = ''
+                            setOpenMenuId(null)
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="surface-menu-action surface-delete"
+                        onClick={() => {
+                          onDelete(item.id)
+                          setOpenMenuId(null)
+                        }}
+                      >
+                        <ActionIcon name="trash" />
+                        <span>Supprimer</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Html>
             )}
@@ -473,7 +507,7 @@ function ThreeAxisCameraControls({
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 || event.defaultPrevented) return
       dragging = true
-      panning = modeRef.current === 'edit' || spacePressed
+      panning = spacePressed
       rolling = modeRef.current === 'scene' && event.shiftKey && !panning
       pointer.x = event.clientX
       pointer.y = event.clientY
@@ -488,7 +522,7 @@ function ThreeAxisCameraControls({
       pointer.x = event.clientX
       pointer.y = event.clientY
 
-      if (panning || (spacePressed && !rolling)) {
+      if ((panning || spacePressed) && !rolling) {
         panning = true
         syncSpherical()
         const distance = Math.max(offset.length(), 0.001)
@@ -653,11 +687,9 @@ export default function App() {
       <header className="page-header">
         <h1>Surface</h1>
         <p className="intro">
-          Ajoute des surfaces, déplace-les en glissant leur intérieur et
-          redimensionne-les par les coins. Choisis une image pour chacune,
-          puis exporte la scène. Glisse dans le vide pour orienter la vue,
-          maintiens Maj en glissant pour incliner la caméra, maintiens Espace en
-          glissant pour déplacer la vue, et utilise la molette pour zoomer.
+          {mode === 'scene'
+            ? 'Glisse pour orienter la caméra, maintiens Maj pour l’incliner, Espace + clic gauche pour déplacer la vue, et utilise la molette pour zoomer.'
+            : 'Espace + clic gauche pour déplacer la vue, molette pour zoomer. Glisse les coins pour redimensionner une surface, son intérieur pour la déplacer, et le bouton ⋯ pour ses options.'}
         </p>
         <div className="header-actions">
           <div className="mode-switch" role="group" aria-label="Mode de travail">
@@ -745,7 +777,7 @@ export default function App() {
             }}
             enableRotate={false}
             enablePan={false}
-            enableZoom={mode === 'scene'}
+            enableZoom
             zoomSpeed={0.1}
             minDistance={4}
             maxDistance={22}
