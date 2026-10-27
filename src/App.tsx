@@ -289,9 +289,6 @@ function SurfaceGrid({
                   onPointerDown={(event) => {
                     event.stopPropagation()
                     event.preventDefault()
-                    const rect = gl.domElement.getBoundingClientRect()
-                    const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1
-                    const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1
                     const startPoint = getPlanePoint(event.clientX, event.clientY)
                     if (!startPoint) return
                     dragRef.current = {
@@ -306,8 +303,6 @@ function SurfaceGrid({
                     }
                     gl.domElement.style.cursor = 'nwse-resize'
                     setSelectedId(item.id)
-                    void ndcX
-                    void ndcY
                   }}
                 />
               </Html>
@@ -419,6 +414,11 @@ function ThreeAxisCameraControls({
   rollRef: RefObject<number>
 }) {
   const { camera, gl, size } = useThree()
+  const modeRef = useRef(mode)
+
+  useEffect(() => {
+    modeRef.current = mode
+  }, [mode])
 
   const coeff = 0.001
 
@@ -473,8 +473,8 @@ function ThreeAxisCameraControls({
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 || event.defaultPrevented) return
       dragging = true
-      panning = mode === 'edit' || spacePressed
-      rolling = mode === 'scene' && event.shiftKey && !panning
+      panning = modeRef.current === 'edit' || spacePressed
+      rolling = modeRef.current === 'scene' && event.shiftKey && !panning
       pointer.x = event.clientX
       pointer.y = event.clientY
       element.setPointerCapture(event.pointerId)
@@ -508,7 +508,7 @@ function ThreeAxisCameraControls({
           controlsRef.current.update()
         }
         saveCameraView(camera.position, target, roll)
-      } else if (mode === 'scene' && (rolling || event.shiftKey)) {
+      } else if (modeRef.current === 'scene' && (rolling || event.shiftKey)) {
         rolling = true
         roll += dx * coeff
         syncSpherical()
@@ -516,7 +516,7 @@ function ThreeAxisCameraControls({
         camera.rotateZ(roll)
         rollRef.current = roll
         saveCameraView(camera.position, target, roll)
-      } else if (mode === 'scene') {
+      } else if (modeRef.current === 'scene') {
         syncSpherical()
         spherical.theta -= dx * coeff
         spherical.phi = Math.max(
@@ -558,7 +558,7 @@ function ThreeAxisCameraControls({
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
     }
-  }, [camera, controlsRef, gl, initialRoll, mode, rollRef, size.height])
+  }, [camera, controlsRef, gl, initialRoll, rollRef, size.height])
 
   return null
 }
