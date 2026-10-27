@@ -19,6 +19,7 @@
 html,
 body,
 #root {
+  width: 100%;
   min-width: 320px;
   min-height: 100%;
   margin: 0;
@@ -34,152 +35,84 @@ textarea {
   font: inherit;
 }
 
-code,
-.eyebrow,
-.scene-caption,
-.help-note {
+code {
   font-family: "DM Mono", monospace;
+  font-size: 0.9em;
+  color: #3e5145;
+  background: #e8e8e1;
+  padding: 0.12em 0.35em;
+  border-radius: 4px;
 }
 
 .app-shell {
-  width: min(1440px, 100%);
+  width: 100%;
   min-height: 100vh;
-  margin: 0 auto;
-  padding: clamp(24px, 5vw, 72px);
   display: flex;
   flex-direction: column;
-  gap: clamp(28px, 4vw, 48px);
 }
 
 .page-header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 32px;
-}
-
-.eyebrow {
-  margin: 0 0 16px;
-  color: #77786f;
-  font-size: 11px;
-  letter-spacing: 0.1em;
+  align-items: baseline;
+  gap: 24px;
+  padding: 26px clamp(20px, 4vw, 64px) 18px;
 }
 
 h1 {
+  flex: 0 0 auto;
   margin: 0;
-  font-size: clamp(42px, 6vw, 76px);
+  color: #44453f;
+  font-size: clamp(24px, 2.4vw, 32px);
   font-weight: 500;
-  letter-spacing: -0.075em;
-  line-height: 0.98;
+  letter-spacing: -0.055em;
+  line-height: 1.15;
 }
 
 .intro {
-  max-width: 540px;
-  margin: 18px 0 0;
-  color: #62635c;
-  font-size: 14px;
+  max-width: 900px;
+  margin: 0;
+  color: #77786f;
+  font-size: 12px;
   line-height: 1.8;
 }
 
-code {
-  font-size: 0.9em;
-  color: #3e5145;
-  background: #e8e8e1;
-  padding: 0.15em 0.4em;
-  border-radius: 4px;
-}
-
-.help-note {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-  padding-bottom: 5px;
-  color: #77786f;
-  font-size: 11px;
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #7a927b;
-}
-
-.scene-frame {
+.scene-stage {
   position: relative;
+  width: 100%;
+  height: calc(100vh - 100px);
   min-height: 420px;
-  height: min(62vh, 680px);
   overflow: hidden;
-  border: 1px solid #e1e0d9;
-  border-radius: 16px;
   background: #f4f3f0;
+  cursor: grab;
+  touch-action: none;
 }
 
-.scene-frame canvas {
+.scene-stage:active {
+  cursor: grabbing;
+}
+
+.scene-stage canvas {
   display: block;
-}
-
-.scene-caption {
-  position: absolute;
-  right: 20px;
-  bottom: 18px;
-  display: flex;
-  gap: 8px;
-  pointer-events: none;
-}
-
-.scene-caption span {
-  padding: 8px 10px;
-  border: 1px solid rgb(225 224 217 / 85%);
-  border-radius: 6px;
-  background: rgb(250 249 246 / 82%);
-  color: #66675f;
-  font-size: 10px;
-  backdrop-filter: blur(8px);
-}
-
-.page-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-  color: #77786f;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.page-footer p {
-  margin: 0;
+  width: 100%;
+  height: 100%;
+  outline: none;
 }
 
 @media (max-width: 720px) {
-  .app-shell {
-    padding: 24px 16px;
-    gap: 28px;
-  }
-
   .page-header {
     align-items: flex-start;
     flex-direction: column;
-    gap: 18px;
+    gap: 8px;
+    padding: 20px 16px 16px;
   }
 
   .intro {
-    font-size: 13px;
+    font-size: 11px;
+    line-height: 1.7;
   }
 
-  .scene-frame {
-    height: 58vh;
+  .scene-stage {
+    height: calc(100svh - 132px);
     min-height: 360px;
-    border-radius: 10px;
-  }
-
-  .help-note {
-    font-size: 10px;
-  }
-
-  .page-footer {
-    flex-direction: column;
-    gap: 8px;
   }
 }
