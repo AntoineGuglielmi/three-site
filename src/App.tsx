@@ -1,9 +1,9 @@
 import { Html, Image, OrbitControls } from '@react-three/drei'
-import { Canvas, useThree } from '@react-three/fiber'\nimport type { ThreeEvent } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
+import type { ThreeEvent } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef, Dispatch, RefObject, SetStateAction } from 'react'
 import { Color, Plane, Raycaster, Spherical, Vector2, Vector3 } from 'three'
-import type { Surface } from './config/surfaces'
 import { sceneConfig, surfaces } from './config/surfaces'
 
 type EditableSurface = {
@@ -537,8 +537,19 @@ export default function App() {
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const rollRef = useRef(initialView?.roll ?? 0)
   const [exportScene, setExportScene] = useState<ExportScene | null>(null)
-  const [backgroundColor, setBackgroundColor] = useState(readBackgroundColor)\n  const [items, setItems] = useState<EditableSurface[]>(getPositionedSurfaces)\n  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const addSurface = useCallback(() => {\n    const id = `surface-${crypto.randomUUID()}`\n    setItems((current) => [...current, { id, width: 4.2, height: 3, x: 0, y: 0, src: '', radius: sceneConfig.cornerRadius }])\n    setSelectedId(id)\n  }, [])\n  const deleteSurface = useCallback((id: string) => {\n    setItems((current) => current.filter((item) => item.id !== id))\n    setSelectedId((current) => current === id ? null : current)\n  }, [])\n  const handleExportReady = useCallback<ExportSceneSetter>((exporter) => {
+  const [backgroundColor, setBackgroundColor] = useState(readBackgroundColor)
+  const [items, setItems] = useState<EditableSurface[]>(getPositionedSurfaces)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const addSurface = useCallback(() => {
+    const id = `surface-${crypto.randomUUID()}`
+    setItems((current) => [...current, { id, width: 4.2, height: 3, x: 0, y: 0, src: '', radius: sceneConfig.cornerRadius }])
+    setSelectedId(id)
+  }, [])
+  const deleteSurface = useCallback((id: string) => {
+    setItems((current) => current.filter((item) => item.id !== id))
+    setSelectedId((current) => current === id ? null : current)
+  }, [])
+  const handleExportReady = useCallback<ExportSceneSetter>((exporter) => {
     setExportScene(() => exporter)
   }, [])
 
@@ -562,7 +573,8 @@ export default function App() {
           glissant pour déplacer la vue, et utilise la molette pour zoomer.
         </p>
         <div className="header-actions">
-          <button type="button" className="add-surface-button" onClick={addSurface}>+ Surface</button>\n          <label className="background-control">
+          <button type="button" className="add-surface-button" onClick={addSurface}>+ Surface</button>
+          <label className="background-control">
             <span>Fond</span>
             <input
               type="color"
