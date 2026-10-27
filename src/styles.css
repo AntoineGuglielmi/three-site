@@ -78,12 +78,40 @@ h1 {
   line-height: 1.15;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+  pointer-events: auto;
+}
+
+.background-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #55564f;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.background-control input {
+  display: block;
+  width: 30px;
+  height: 30px;
+  padding: 3px;
+  border: 1px solid rgb(68 69 63 / 20%);
+  border-radius: 6px;
+  background: rgb(244 243 240 / 82%);
+  cursor: pointer;
+}
+
 .export-actions {
   display: flex;
   flex: 0 0 auto;
   gap: 8px;
-  margin-left: auto;
-  pointer-events: auto;
 }
 
 .export-actions button {
@@ -149,7 +177,9 @@ h1 {
     gap: 10px;
   }
 
-  .export-actions {
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
     margin-left: 0;
   }
 
