@@ -38,6 +38,7 @@ export const surfaces: Surface[][] = [
 Dans le même fichier, `sceneConfig.camera.position` définit la position initiale de la caméra, `target` son point de visée et `fov` son champ de vision.
 
 - Glisser avec le bouton gauche pour orbiter autour des surfaces.
+- Maintenir `Espace` et glisser pour déplacer la caméra latéralement, comme dans Figma.
 - Maintenir `Maj` et glisser pour incliner la caméra autour de l'axe de vue.
 - Utiliser la molette pour zoomer.
 
