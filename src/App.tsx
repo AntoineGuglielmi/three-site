@@ -87,29 +87,29 @@ function SceneExporter({ onReady }: { onReady: ExportSceneSetter }) {
     const previousClearAlpha = gl.getClearAlpha()
     const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
 
-    // Composite the rounded image corners against an opaque background before
-    // encoding. PNG uses the scene color; JPG uses white.
+    // Render and capture synchronously so the next R3F frame cannot replace
+    // the export frame before the browser reads the canvas.
     const backgroundColor = new Color(
       format === 'png' ? sceneConfig.background : 0xffffff,
     )
     scene.background = backgroundColor
     gl.setClearColor(backgroundColor, 1)
-    gl.render(scene, camera)
 
-    gl.domElement.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `surface-${Date.now()}.${format}`
-        link.click()
-        URL.revokeObjectURL(url)
-      }
-
+    try {
+      gl.render(scene, camera)
+      const dataUrl = gl.domElement.toDataURL(
+        mimeType,
+        format === 'jpg' ? 0.92 : undefined,
+      )
+      const link = document.createElement('a')
+      link.href = dataUrl
+      link.download = `surface-${Date.now()}.${format}`
+      link.click()
+    } finally {
       scene.background = previousBackground
       gl.setClearColor(previousClearColor, previousClearAlpha)
       gl.render(scene, camera)
-    }, mimeType, format === 'jpg' ? 0.92 : undefined)
+    }
   }, [camera, gl, scene])
 
   useEffect(() => {
