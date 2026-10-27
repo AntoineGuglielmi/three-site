@@ -239,6 +239,7 @@ export default function App() {
             enableRotate={false}
             enablePan={false}
             enableZoom
+            zoomSpeed={0.5}
             minDistance={4}
             maxDistance={22}
           />
