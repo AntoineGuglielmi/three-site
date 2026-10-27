@@ -1,7 +1,7 @@
 import { Html, Image, OrbitControls } from '@react-three/drei'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'\nimport type { ThreeEvent } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ComponentRef, RefObject } from 'react'
+import type { ComponentRef, Dispatch, RefObject, SetStateAction } from 'react'
 import { Color, Plane, Raycaster, Spherical, Vector2, Vector3 } from 'three'
 import type { Surface } from './config/surfaces'
 import { sceneConfig, surfaces } from './config/surfaces'
@@ -134,7 +134,7 @@ function SurfaceGrid({
   onDelete,
 }: {
   items: EditableSurface[]
-  setItems: React.Dispatch<React.SetStateAction<EditableSurface[]>>
+  setItems: Dispatch<SetStateAction<EditableSurface[]>>
   selectedId: string | null
   setSelectedId: (id: string | null) => void
   onDelete: (id: string) => void
@@ -157,7 +157,7 @@ function SurfaceGrid({
   }, [camera, gl, intersection, plane, pointer, raycaster])
 
   const startDrag = useCallback((
-    event: Parameters<NonNullable<React.ComponentProps<typeof Image>['onPointerDown']>>[0],
+    event: ThreeEvent<PointerEvent>,
     item: EditableSurface,
     mode: 'move' | 'resize',
     cornerX?: -1 | 1,
