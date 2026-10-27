@@ -1,6 +1,7 @@
 import { Image, OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
+import type { ComponentRef, RefObject } from "react";
 import { Spherical, Vector3 } from "three";
 import type { Surface } from "./config/surfaces";
 import { sceneConfig, surfaces } from "./config/surfaces";
@@ -11,7 +12,7 @@ type PositionedSurface = {
   key: string;
 };
 
-type ControlsRef = React.RefObject<React.ComponentRef<typeof OrbitControls> | null>;
+type ControlsRef = RefObject<ComponentRef<typeof OrbitControls> | null>;
 
 function getPositionedSurfaces(): PositionedSurface[] {
   const unit = sceneConfig.pixelsPerUnit;
@@ -202,7 +203,7 @@ function ThreeAxisCameraControls({ controlsRef }: { controlsRef: ControlsRef }) 
 
 export default function App() {
   const { camera } = sceneConfig;
-  const controlsRef = useRef<React.ComponentRef<typeof OrbitControls>>(null);
+  const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
 
   return (
     <main className="app-shell">
