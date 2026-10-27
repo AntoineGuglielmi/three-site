@@ -1,18 +1,18 @@
 export type Surface = {
   /** Width in pixels, converted to 3D units by pixelsPerUnit. */
-  width: number;
+  width: number
   /** Height in pixels, converted to 3D units by pixelsPerUnit. */
-  height: number;
+  height: number
   /** Image URL or a path inside /public, e.g. /images/project-a.jpg. */
-  src: string;
+  src: string
   /** Optional rounded-corner amount between 0 and 1. */
-  radius?: number;
+  radius?: number
   /** Optional accessible description for this image. */
-  alt?: string;
-};
+  alt?: string
+}
 
 export const sceneConfig = {
-  background: "#f4f3f0",
+  background: '#f4f3f0',
   /** 100 source pixels become one Three.js world unit. */
   pixelsPerUnit: 100,
   /** Horizontal gap between surfaces, in source pixels. */
@@ -29,7 +29,7 @@ export const sceneConfig = {
     /** Perspective field of view in degrees. */
     fov: 38,
   },
-};
+}
 
 /**
  * Each nested array is a row. Each object is one image surface.
@@ -39,42 +39,36 @@ export const sceneConfig = {
 export const surfaces: Surface[][] = [
   [
     {
-      width: 340,
-      height: 230,
-      src: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85",
-      alt: "Espace de travail lumineux",
+      width: 619,
+      height: 651,
+      src: '/locproof-validation.png',
+      alt: 'Espace de travail lumineux',
     },
     {
-      width: 280,
-      height: 230,
-      src: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=900&q=85",
-      alt: "Intérieur aux tons doux",
+      width: 619,
+      height: 776,
+      src: '/locproof-rental.png',
+      alt: 'Intérieur aux tons doux',
     },
     {
-      width: 340,
-      height: 230,
-      src: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=85",
-      alt: "Bureau contemporain",
+      width: 307,
+      height: 800,
+      src: '/locproof-reference.png',
+      alt: 'Bureau contemporain',
     },
   ],
   [
     {
-      width: 280,
-      height: 190,
-      src: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=900&q=85",
+      width: 731,
+      height: 540,
+      src: '/locproof-profile.png',
       alt: "Composition d'intérieur",
     },
     {
-      width: 340,
-      height: 190,
-      src: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85",
-      alt: "Espace de travail",
-    },
-    {
-      width: 340,
-      height: 190,
-      src: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=85",
-      alt: "Bureau lumineux",
+      width: 731,
+      height: 655,
+      src: '/locproof-profile-references.png',
+      alt: 'Espace de travail',
     },
   ],
-];
+]

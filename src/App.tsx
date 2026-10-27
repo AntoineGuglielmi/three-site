@@ -47,18 +47,15 @@ function readCameraView(): CameraView | null {
       view.target.length !== 3 ||
       !view.target.every(Number.isFinite) ||
       !Number.isFinite(view.roll)
-    ) return null
+    )
+      return null
     return view
   } catch {
     return null
   }
 }
 
-function saveCameraView(
-  position: Vector3,
-  target: Vector3,
-  roll: number,
-) {
+function saveCameraView(position: Vector3, target: Vector3, roll: number) {
   try {
     const view: CameraView = {
       position: position.toArray() as [number, number, number],
@@ -145,36 +142,39 @@ function SceneExporter({
 }) {
   const { camera, gl, scene } = useThree()
 
-  const exportScene = useCallback<ExportScene>((format) => {
-    const previousBackground = scene.background
-    const previousClearColor = gl.getClearColor(new Color()).clone()
-    const previousClearAlpha = gl.getClearAlpha()
-    const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
+  const exportScene = useCallback<ExportScene>(
+    (format) => {
+      const previousBackground = scene.background
+      const previousClearColor = gl.getClearColor(new Color()).clone()
+      const previousClearAlpha = gl.getClearAlpha()
+      const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
 
-    // Render and capture synchronously so the next R3F frame cannot replace
-    // the export frame before the browser reads the canvas.
-    const exportBackground = new Color(
-      format === 'png' ? backgroundColor : 0xffffff,
-    )
-    scene.background = exportBackground
-    gl.setClearColor(exportBackground, 1)
-
-    try {
-      gl.render(scene, camera)
-      const dataUrl = gl.domElement.toDataURL(
-        mimeType,
-        format === 'jpg' ? 0.92 : undefined,
+      // Render and capture synchronously so the next R3F frame cannot replace
+      // the export frame before the browser reads the canvas.
+      const exportBackground = new Color(
+        format === 'png' ? backgroundColor : 0xffffff,
       )
-      const link = document.createElement('a')
-      link.href = dataUrl
-      link.download = `surface-${Date.now()}.${format}`
-      link.click()
-    } finally {
-      scene.background = previousBackground
-      gl.setClearColor(previousClearColor, previousClearAlpha)
-      gl.render(scene, camera)
-    }
-  }, [backgroundColor, camera, gl, scene])
+      scene.background = exportBackground
+      gl.setClearColor(exportBackground, 1)
+
+      try {
+        gl.render(scene, camera)
+        const dataUrl = gl.domElement.toDataURL(
+          mimeType,
+          format === 'jpg' ? 0.92 : undefined,
+        )
+        const link = document.createElement('a')
+        link.href = dataUrl
+        link.download = `surface-${Date.now()}.${format}`
+        link.click()
+      } finally {
+        scene.background = previousBackground
+        gl.setClearColor(previousClearColor, previousClearAlpha)
+        gl.render(scene, camera)
+      }
+    },
+    [backgroundColor, camera, gl, scene],
+  )
 
   useEffect(() => {
     onReady(exportScene)
@@ -195,6 +195,8 @@ function ThreeAxisCameraControls({
   rollRef: RefObject<number>
 }) {
   const { camera, gl, size } = useThree()
+
+  const coeff = 0.001
 
   useEffect(() => {
     const element = gl.domElement
@@ -284,7 +286,7 @@ function ThreeAxisCameraControls({
         saveCameraView(camera.position, target, roll)
       } else if (rolling || event.shiftKey) {
         rolling = true
-        roll += dx * 0.003
+        roll += dx * coeff
         syncSpherical()
         camera.lookAt(target)
         camera.rotateZ(roll)
@@ -292,10 +294,10 @@ function ThreeAxisCameraControls({
         saveCameraView(camera.position, target, roll)
       } else {
         syncSpherical()
-        spherical.theta -= dx * 0.003
+        spherical.theta -= dx * coeff
         spherical.phi = Math.max(
           0.08,
-          Math.min(Math.PI - 0.08, spherical.phi - dy * 0.003),
+          Math.min(Math.PI - 0.08, spherical.phi - dy * coeff),
         )
         offset.setFromSpherical(spherical)
         camera.position.copy(target).add(offset)
@@ -374,16 +376,29 @@ export default function App() {
               type="color"
               aria-label="Couleur de fond du canvas"
               value={backgroundColor}
-              onChange={(event) => setBackgroundColor(event.currentTarget.value)}
+              onChange={(event) =>
+                setBackgroundColor(event.currentTarget.value)
+              }
             />
           </label>
-          <div className="export-actions" aria-label="Exporter les surfaces">
-          <button type="button" onClick={() => exportScene?.('png')} disabled={!exportScene}>
-            PNG
-          </button>
-          <button type="button" onClick={() => exportScene?.('jpg')} disabled={!exportScene}>
-            JPG
-          </button>
+          <div
+            className="export-actions"
+            aria-label="Exporter les surfaces"
+          >
+            <button
+              type="button"
+              onClick={() => exportScene?.('png')}
+              disabled={!exportScene}
+            >
+              PNG
+            </button>
+            <button
+              type="button"
+              onClick={() => exportScene?.('jpg')}
+              disabled={!exportScene}
+            >
+              JPG
+            </button>
           </div>
         </div>
       </header>
@@ -402,7 +417,10 @@ export default function App() {
           dpr={[1, 1.75]}
           gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         >
-          <color attach="background" args={[backgroundColor]} />
+          <color
+            attach="background"
+            args={[backgroundColor]}
+          />
           <ambientLight intensity={2} />
           <SurfaceGrid />
           <ThreeAxisCameraControls
