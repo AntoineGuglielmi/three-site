@@ -21,6 +21,18 @@ type CameraView = {
 }
 
 const CAMERA_VIEW_KEY = 'surface-camera-view'
+const BACKGROUND_COLOR_KEY = 'surface-background-color'
+
+function readBackgroundColor(): string {
+  try {
+    const stored = localStorage.getItem(BACKGROUND_COLOR_KEY)
+    return stored && /^#[0-9a-f]{6}$/i.test(stored)
+      ? stored
+      : sceneConfig.background
+  } catch {
+    return sceneConfig.background
+  }
+}
 
 function readCameraView(): CameraView | null {
   try {
@@ -124,7 +136,13 @@ type ExportFormat = 'png' | 'jpg'
 type ExportScene = (format: ExportFormat) => void
 type ExportSceneSetter = (exporter: ExportScene | null) => void
 
-function SceneExporter({ onReady }: { onReady: ExportSceneSetter }) {
+function SceneExporter({
+  onReady,
+  backgroundColor,
+}: {
+  onReady: ExportSceneSetter
+  backgroundColor: string
+}) {
   const { camera, gl, scene } = useThree()
 
   const exportScene = useCallback<ExportScene>((format) => {
@@ -135,11 +153,11 @@ function SceneExporter({ onReady }: { onReady: ExportSceneSetter }) {
 
     // Render and capture synchronously so the next R3F frame cannot replace
     // the export frame before the browser reads the canvas.
-    const backgroundColor = new Color(
-      format === 'png' ? sceneConfig.background : 0xffffff,
+    const exportBackground = new Color(
+      format === 'png' ? backgroundColor : 0xffffff,
     )
-    scene.background = backgroundColor
-    gl.setClearColor(backgroundColor, 1)
+    scene.background = exportBackground
+    gl.setClearColor(exportBackground, 1)
 
     try {
       gl.render(scene, camera)
@@ -156,7 +174,7 @@ function SceneExporter({ onReady }: { onReady: ExportSceneSetter }) {
       gl.setClearColor(previousClearColor, previousClearAlpha)
       gl.render(scene, camera)
     }
-  }, [camera, gl, scene])
+  }, [backgroundColor, camera, gl, scene])
 
   useEffect(() => {
     onReady(exportScene)
@@ -325,9 +343,18 @@ export default function App() {
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const rollRef = useRef(initialView?.roll ?? 0)
   const [exportScene, setExportScene] = useState<ExportScene | null>(null)
+  const [backgroundColor, setBackgroundColor] = useState(readBackgroundColor)
   const handleExportReady = useCallback<ExportSceneSetter>((exporter) => {
     setExportScene(() => exporter)
   }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(BACKGROUND_COLOR_KEY, backgroundColor)
+    } catch {
+      // The color picker remains usable when storage is unavailable.
+    }
+  }, [backgroundColor])
 
   return (
     <main className="app-shell">
@@ -340,13 +367,24 @@ export default function App() {
           maintiens Maj en glissant pour incliner la caméra, maintiens Espace en
           glissant pour déplacer la vue, et utilise la molette pour zoomer.
         </p>
-        <div className="export-actions" aria-label="Exporter les surfaces">
+        <div className="header-actions">
+          <label className="background-control">
+            <span>Fond</span>
+            <input
+              type="color"
+              aria-label="Couleur de fond du canvas"
+              value={backgroundColor}
+              onChange={(event) => setBackgroundColor(event.currentTarget.value)}
+            />
+          </label>
+          <div className="export-actions" aria-label="Exporter les surfaces">
           <button type="button" onClick={() => exportScene?.('png')} disabled={!exportScene}>
             PNG
           </button>
           <button type="button" onClick={() => exportScene?.('jpg')} disabled={!exportScene}>
             JPG
           </button>
+          </div>
         </div>
       </header>
 
@@ -364,10 +402,7 @@ export default function App() {
           dpr={[1, 1.75]}
           gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         >
-          <color
-            attach="background"
-            args={[sceneConfig.background]}
-          />
+          <color attach="background" args={[backgroundColor]} />
           <ambientLight intensity={2} />
           <SurfaceGrid />
           <ThreeAxisCameraControls
@@ -375,7 +410,10 @@ export default function App() {
             initialRoll={initialView?.roll ?? 0}
             rollRef={rollRef}
           />
-          <SceneExporter onReady={handleExportReady} />
+          <SceneExporter
+            onReady={handleExportReady}
+            backgroundColor={backgroundColor}
+          />
           <OrbitControls
             ref={controlsRef}
             makeDefault
