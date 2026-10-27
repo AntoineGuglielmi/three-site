@@ -263,6 +263,7 @@ function ThreeAxisCameraControls({
           controlsRef.current.target.copy(target)
           controlsRef.current.update()
         }
+        saveCameraView(camera.position, target, roll)
       } else if (rolling || event.shiftKey) {
         rolling = true
         roll += dx * 0.006
