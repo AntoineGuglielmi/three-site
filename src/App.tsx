@@ -1,6 +1,7 @@
 import { Image, OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import { useMemo } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
+import { useEffect, useMemo } from "react";
+import { Spherical, Vector3 } from "three";
 import type { Surface } from "./config/surfaces";
 import { sceneConfig, surfaces } from "./config/surfaces";
 
@@ -66,27 +67,94 @@ function SurfaceGrid() {
   );
 }
 
+/** Drag to orbit around the grid; Shift + drag rolls the camera around its view axis. */
+function ThreeAxisCameraControls() {
+  const { camera, gl } = useThree();
+
+  useEffect(() => {
+    const element = gl.domElement;
+    const target = new Vector3(...sceneConfig.camera.target);
+    const spherical = new Spherical();
+    const offset = new Vector3();
+    const pointer = { x: 0, y: 0 };
+    let dragging = false;
+    let rolling = false;
+    let roll = 0;
+
+    const syncSpherical = () => {
+      offset.copy(camera.position).sub(target);
+      spherical.setFromVector3(offset);
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      dragging = true;
+      rolling = event.shiftKey;
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      element.setPointerCapture(event.pointerId);
+      syncSpherical();
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!dragging) return;
+      const dx = event.clientX - pointer.x;
+      const dy = event.clientY - pointer.y;
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+
+      if (event.shiftKey || rolling) {
+        roll += dx * 0.006;
+      } else {
+        spherical.theta -= dx * 0.006;
+        spherical.phi = Math.max(0.08, Math.min(Math.PI - 0.08, spherical.phi - dy * 0.006));
+        offset.setFromSpherical(spherical);
+        camera.position.copy(target).add(offset);
+      }
+
+      camera.lookAt(target);
+      camera.rotateZ(roll);
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      dragging = false;
+      if (element.hasPointerCapture(event.pointerId)) {
+        element.releasePointerCapture(event.pointerId);
+      }
+    };
+
+    element.addEventListener("pointerdown", onPointerDown);
+    element.addEventListener("pointermove", onPointerMove);
+    element.addEventListener("pointerup", onPointerUp);
+    element.addEventListener("pointercancel", onPointerUp);
+
+    return () => {
+      element.removeEventListener("pointerdown", onPointerDown);
+      element.removeEventListener("pointermove", onPointerMove);
+      element.removeEventListener("pointerup", onPointerUp);
+      element.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, [camera, gl]);
+
+  return null;
+}
+
 export default function App() {
   const { camera } = sceneConfig;
 
   return (
     <main className="app-shell">
       <header className="page-header">
-        <div>
-          <p className="eyebrow">THREE.JS / IMAGE MOCKUPS</p>
-          <h1>Surface</h1>
-          <p className="intro">
-            Une grille de surfaces pour mettre des images en scène. La disposition se règle
-            dans <code>src/config/surfaces.ts</code>.
-          </p>
-        </div>
-        <div className="help-note">
-          <span className="status-dot" />
-          <span>Glisser pour tourner · Molette pour zoomer</span>
-        </div>
+        <h1>Surface</h1>
+        <p className="intro">
+          Une grille de surfaces pour mettre des images en scène. Modifie leur disposition,
+          leurs dimensions et leurs fichiers dans <code>src/config/surfaces.ts</code>.
+          Glisse pour orienter la vue, maintiens Maj en glissant pour incliner la caméra,
+          et utilise la molette pour zoomer.
+        </p>
       </header>
 
-      <section className="scene-frame" aria-label="Aperçu 3D des surfaces">
+      <section className="scene-stage" aria-label="Aperçu 3D des surfaces">
         <Canvas
           camera={{
             position: camera.position,
@@ -100,26 +168,18 @@ export default function App() {
           <color attach="background" args={[sceneConfig.background]} />
           <ambientLight intensity={2} />
           <SurfaceGrid />
+          <ThreeAxisCameraControls />
           <OrbitControls
             makeDefault
             target={camera.target}
+            enableRotate={false}
             enablePan={false}
+            enableZoom
             minDistance={4}
             maxDistance={22}
-            minPolarAngle={0.2}
-            maxPolarAngle={Math.PI / 2}
           />
         </Canvas>
-        <div className="scene-caption">
-          <span>{surfaces.length} rangées</span>
-          <span>{surfaces.reduce((count, row) => count + row.length, 0)} surfaces</span>
-        </div>
       </section>
-
-      <footer className="page-footer">
-        <p>Chaque image est une surface indépendante, avec ses propres dimensions et son propre fichier.</p>
-        <p>Images de démonstration · remplace les <code>src</code> par tes visuels.</p>
-      </footer>
     </main>
   );
 }
