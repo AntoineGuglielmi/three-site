@@ -171,7 +171,7 @@ function SurfaceGrid({
   const startDrag = useCallback((
     event: ThreeEvent<PointerEvent>,
     item: EditableSurface,
-    mode: 'move' | 'resize',
+    dragMode: 'move' | 'resize',
     cornerX?: -1 | 1,
     cornerY?: -1 | 1,
   ) => {
@@ -182,7 +182,7 @@ function SurfaceGrid({
     const point = event.point
     dragRef.current = {
       id: item.id,
-      mode,
+      mode: dragMode,
       offsetX: item.x - point.x,
       offsetY: item.y - point.y,
       cornerX,
@@ -190,7 +190,7 @@ function SurfaceGrid({
       anchorX: cornerX ? item.x - cornerX * item.width / 2 : undefined,
       anchorY: cornerY ? item.y - cornerY * item.height / 2 : undefined,
     }
-    gl.domElement.style.cursor = mode === 'move' ? 'grabbing' : 'nwse-resize'
+    gl.domElement.style.cursor = dragMode === 'move' ? 'grabbing' : 'nwse-resize'
   }, [gl, mode, setSelectedId])
 
   useEffect(() => {
