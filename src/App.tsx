@@ -115,6 +115,34 @@ function getPositionedSurfaces(): EditableSurface[] {
   })
 }
 
+const SURFACES_KEY = 'surface-layout'
+
+function readStoredSurfaces(): EditableSurface[] {
+  const defaults = getPositionedSurfaces()
+  try {
+    const stored = localStorage.getItem(SURFACES_KEY)
+    if (!stored) return defaults
+    const parsed: unknown = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return defaults
+
+    const valid = parsed.every((item): item is EditableSurface =>
+      item !== null &&
+      typeof item === 'object' &&
+      typeof item.id === 'string' &&
+      Number.isFinite(item.width) && item.width > 0 &&
+      Number.isFinite(item.height) && item.height > 0 &&
+      Number.isFinite(item.x) &&
+      Number.isFinite(item.y) &&
+      typeof item.src === 'string' &&
+      Number.isFinite(item.radius) && item.radius >= 0 &&
+      (item.alt === undefined || typeof item.alt === 'string'),
+    )
+    return valid ? parsed as EditableSurface[] : defaults
+  } catch {
+    return defaults
+  }
+}
+
 function ActionIcon({ name }: { name: 'more' | 'trash' | 'image' }) {
   if (name === 'more') {
     return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /><circle cx="19" cy="12" r="1.6" fill="currentColor" /></svg>
@@ -618,35 +646,71 @@ function ModeCamera({
     if (previousMode.current === mode) return
     previousMode.current = mode
 
+    const controls = controlsRef.current
+    const currentTarget = controls?.target.clone() ?? new Vector3(...sceneConfig.camera.target)
+    const fromPosition = camera.position.clone()
+    const fromTarget = currentTarget.clone()
+    const fromQuaternion = camera.quaternion.clone()
+    const targetView = mode === 'edit'
+      ? {
+          position: new Vector3(currentTarget.x, currentTarget.y, currentTarget.z + 18),
+          target: currentTarget.clone(),
+          roll: 0,
+        }
+      : (() => {
+          const view = sceneView.current ?? initialView
+          return {
+            position: new Vector3(...(view?.position ?? sceneConfig.camera.position)),
+            target: new Vector3(...(view?.target ?? sceneConfig.camera.target)),
+            roll: view?.roll ?? 0,
+          }
+        })()
+
     if (mode === 'edit') {
-      const target = controlsRef.current?.target ?? new Vector3(...sceneConfig.camera.target)
       sceneView.current = {
         position: camera.position.toArray() as [number, number, number],
-        target: target.toArray() as [number, number, number],
+        target: currentTarget.toArray() as [number, number, number],
         roll: rollRef.current,
       }
-      camera.position.set(target.x, target.y, target.z + 18)
-      camera.up.set(0, 1, 0)
-      camera.lookAt(target)
-      rollRef.current = 0
-      if (controlsRef.current) {
-        controlsRef.current.target.copy(target)
-        controlsRef.current.update()
-      }
-      return
     }
 
-    const view = sceneView.current ?? initialView
-    const target = new Vector3(...(view?.target ?? sceneConfig.camera.target))
-    camera.position.set(...(view?.position ?? sceneConfig.camera.position))
+    const toQuaternion = camera.quaternion.clone()
     camera.up.set(0, 1, 0)
-    camera.lookAt(target)
-    camera.rotateZ(view?.roll ?? 0)
-    rollRef.current = view?.roll ?? 0
-    if (controlsRef.current) {
-      controlsRef.current.target.copy(target)
-      controlsRef.current.update()
+    camera.position.copy(targetView.position)
+    camera.lookAt(targetView.target)
+    camera.rotateZ(targetView.roll)
+    toQuaternion.copy(camera.quaternion)
+    camera.position.copy(fromPosition)
+    camera.quaternion.copy(fromQuaternion)
+
+    const duration = 480
+    const startTime = performance.now()
+    let frame = 0
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - startTime) / duration)
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2
+
+      camera.position.copy(fromPosition).lerp(targetView.position, eased)
+      const target = fromTarget.clone().lerp(targetView.target, eased)
+      camera.up.set(0, 1, 0)
+      camera.lookAt(target)
+      camera.quaternion.slerp(toQuaternion, eased)
+      if (controls) {
+        controls.target.copy(target)
+        controls.update()
+      }
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate)
+      } else {
+        rollRef.current = targetView.roll
+        if (mode === 'scene') saveCameraView(camera.position, target, targetView.roll)
+      }
     }
+    frame = requestAnimationFrame(animate)
+
+    return () => cancelAnimationFrame(frame)
   }, [camera, controlsRef, initialView, mode, rollRef])
 
   return null
@@ -659,7 +723,7 @@ export default function App() {
   const rollRef = useRef(initialView?.roll ?? 0)
   const [exportScene, setExportScene] = useState<ExportScene | null>(null)
   const [backgroundColor, setBackgroundColor] = useState(readBackgroundColor)
-  const [items, setItems] = useState<EditableSurface[]>(getPositionedSurfaces)
+  const [items, setItems] = useState<EditableSurface[]>(readStoredSurfaces)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mode, setMode] = useState<'scene' | 'edit'>('scene')
   const addSurface = useCallback(() => {
@@ -674,6 +738,15 @@ export default function App() {
   const handleExportReady = useCallback<ExportSceneSetter>((exporter) => {
     setExportScene(() => exporter)
   }, [])
+
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SURFACES_KEY, JSON.stringify(items))
+    } catch {
+      // Large images or unavailable storage must not break editing.
+    }
+  }, [items])
 
   useEffect(() => {
     try {
