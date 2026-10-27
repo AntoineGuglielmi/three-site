@@ -87,7 +87,9 @@ function SceneExporter({ onReady }: { onReady: ExportSceneSetter }) {
     const previousClearAlpha = gl.getClearAlpha()
     const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
 
-    scene.background = null
+    // Render against an actual white scene background for JPG so transparent
+    // pixels from rounded image corners are composited before JPEG encoding.
+    scene.background = format === 'jpg' ? new Color(0xffffff) : null
     gl.setClearColor(format === 'png' ? 0x000000 : 0xffffff, format === 'png' ? 0 : 1)
     gl.render(scene, camera)
 
