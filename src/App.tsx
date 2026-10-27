@@ -1,8 +1,8 @@
 import { Image, OrbitControls } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef, RefObject } from 'react'
-import { Spherical, Vector3 } from 'three'
+import { Color, Spherical, Vector3 } from 'three'
 import type { Surface } from './config/surfaces'
 import { sceneConfig, surfaces } from './config/surfaces'
 
@@ -72,6 +72,47 @@ function SurfaceGrid() {
       ))}
     </group>
   )
+}
+
+type ExportFormat = 'png' | 'jpg'
+type ExportScene = (format: ExportFormat) => void
+type ExportSceneSetter = (exporter: ExportScene | null) => void
+
+function SceneExporter({ onReady }: { onReady: ExportSceneSetter }) {
+  const { camera, gl, scene } = useThree()
+
+  const exportScene = useCallback<ExportScene>((format) => {
+    const previousBackground = scene.background
+    const previousClearColor = gl.getClearColor(new Color()).clone()
+    const previousClearAlpha = gl.getClearAlpha()
+    const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
+
+    scene.background = null
+    gl.setClearColor(format === 'png' ? 0x000000 : 0xffffff, format === 'png' ? 0 : 1)
+    gl.render(scene, camera)
+
+    gl.domElement.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `surface-${Date.now()}.${format}`
+        link.click()
+        URL.revokeObjectURL(url)
+      }
+
+      scene.background = previousBackground
+      gl.setClearColor(previousClearColor, previousClearAlpha)
+      gl.render(scene, camera)
+    }, mimeType, format === 'jpg' ? 0.92 : undefined)
+  }, [camera, gl, scene])
+
+  useEffect(() => {
+    onReady(exportScene)
+    return () => onReady(null)
+  }, [exportScene, onReady])
+
+  return null
 }
 
 /** Drag to orbit, Shift + drag to roll, or Space + drag to pan the camera. */
@@ -220,6 +261,10 @@ function ThreeAxisCameraControls({
 export default function App() {
   const { camera } = sceneConfig
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
+  const [exportScene, setExportScene] = useState<ExportScene | null>(null)
+  const handleExportReady = useCallback<ExportSceneSetter>((exporter) => {
+    setExportScene(() => exporter)
+  }, [])
 
   return (
     <main className="app-shell">
@@ -232,6 +277,14 @@ export default function App() {
           maintiens Maj en glissant pour incliner la caméra, maintiens Espace en
           glissant pour déplacer la vue, et utilise la molette pour zoomer.
         </p>
+        <div className="export-actions" aria-label="Exporter les surfaces">
+          <button type="button" onClick={() => exportScene?.('png')} disabled={!exportScene}>
+            PNG
+          </button>
+          <button type="button" onClick={() => exportScene?.('jpg')} disabled={!exportScene}>
+            JPG
+          </button>
+        </div>
       </header>
 
       <section
@@ -246,7 +299,7 @@ export default function App() {
             far: 100,
           }}
           dpr={[1, 1.75]}
-          gl={{ antialias: true, alpha: false }}
+          gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         >
           <color
             attach="background"
@@ -255,6 +308,7 @@ export default function App() {
           <ambientLight intensity={2} />
           <SurfaceGrid />
           <ThreeAxisCameraControls controlsRef={controlsRef} />
+          <SceneExporter onReady={handleExportReady} />
           <OrbitControls
             ref={controlsRef}
             makeDefault
