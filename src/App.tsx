@@ -152,7 +152,8 @@ function SurfaceGrid({
   onDelete: (id: string) => void
 }) {
   const { camera, gl } = useThree()
-  const dragRef = useRef<DragState | null>(null)\n  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const dragRef = useRef<DragState | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const raycaster = useMemo(() => new Raycaster(), [])
   const pointer = useMemo(() => new Vector2(), [])
   const plane = useMemo(() => new Plane(new Vector3(0, 0, 1), 0), [])
