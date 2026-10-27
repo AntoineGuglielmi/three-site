@@ -1,7 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 :root {
-  font-family: "Manrope", sans-serif;
+  font-family: 'Manrope', sans-serif;
   color: #242521;
   background: #f4f3f0;
   font-synthesis: none;
@@ -36,7 +36,7 @@ textarea {
 }
 
 code {
-  font-family: "DM Mono", monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 0.9em;
   color: #3e5145;
   background: #e8e8e1;
@@ -59,12 +59,10 @@ code {
   left: 0;
   right: 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 24px;
-  padding: 26px clamp(20px, 4vw, 64px) 18px;
-  background: rgb(255 255 255 / 76%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  padding: 18px clamp(20px, 4vw, 64px);
+  background: rgb(255 255 255 / 40%);
   pointer-events: none;
   justify-content: space-between;
   flex-wrap: wrap;
@@ -94,10 +92,12 @@ h1 {
   padding: 8px 12px;
   color: #44453f;
   background: rgb(244 243 240 / 82%);
-  font-family: "DM Mono", monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 11px;
   cursor: pointer;
-  transition: background 160ms ease, border-color 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
 }
 
 .export-actions button:hover:not(:disabled) {
