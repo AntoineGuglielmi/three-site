@@ -127,12 +127,14 @@ type DragState = {
 }
 
 function SurfaceGrid({
+  mode,
   items,
   setItems,
   selectedId,
   setSelectedId,
   onDelete,
 }: {
+  mode: 'scene' | 'edit'
   items: EditableSurface[]
   setItems: Dispatch<SetStateAction<EditableSurface[]>>
   selectedId: string | null
@@ -163,6 +165,7 @@ function SurfaceGrid({
     cornerX?: -1 | 1,
     cornerY?: -1 | 1,
   ) => {
+    if (mode !== 'edit') return
     event.stopPropagation()
     event.nativeEvent.preventDefault()
     setSelectedId(item.id)
@@ -178,7 +181,7 @@ function SurfaceGrid({
       anchorY: cornerY ? item.y - cornerY * item.height / 2 : undefined,
     }
     gl.domElement.style.cursor = mode === 'move' ? 'grabbing' : 'nwse-resize'
-  }, [gl, setSelectedId])
+  }, [gl, mode, setSelectedId])
 
   useEffect(() => {
     const onPointerMove = (event: PointerEvent) => {
@@ -222,7 +225,7 @@ function SurfaceGrid({
       window.removeEventListener('pointerup', onPointerUp)
       window.removeEventListener('pointercancel', onPointerUp)
     }
-  }, [getPlanePoint, gl, setItems])
+  }, [getPlanePoint, gl, mode, setItems])
 
   const updateImage = useCallback((id: string, file: File | undefined) => {
     if (!file || !file.type.startsWith('image/')) return
@@ -259,58 +262,84 @@ function SurfaceGrid({
                 radius={item.radius}
                 transparent
                 toneMapped={false}
-                onPointerDown={(event) => startDrag(event, item, 'move')}
-                onPointerOver={() => { if (!dragRef.current) gl.domElement.style.cursor = 'grab' }}
-                onPointerOut={() => { if (!dragRef.current) gl.domElement.style.cursor = '' }}
+                onPointerDown={mode === 'edit' ? (event) => startDrag(event, item, 'move') : undefined}
+                onPointerOver={mode === 'edit' ? () => { if (!dragRef.current) gl.domElement.style.cursor = 'grab' } : undefined}
+                onPointerOut={mode === 'edit' ? () => { if (!dragRef.current) gl.domElement.style.cursor = '' } : undefined}
               />
             ) : (
               <mesh
                 position={position}
-                onPointerDown={(event) => startDrag(event, item, 'move')}
+                onPointerDown={mode === 'edit' ? (event) => startDrag(event, item, 'move') : undefined}
               >
                 <planeGeometry args={[item.width, item.height]} />
                 <meshBasicMaterial color="#e6e5df" />
               </mesh>
             )}
 
-            {selected && cornerPositions.map(({ x, y }) => (
-              <mesh
+            {mode === 'edit' && selected && cornerPositions.map(({ x, y }) => (
+              <Html
                 key={`${x}-${y}`}
                 position={[item.x + x * item.width / 2, item.y + y * item.height / 2, 0.08]}
-                onPointerDown={(event) => startDrag(event, item, 'resize', x, y)}
-                onPointerOver={() => { gl.domElement.style.cursor = 'nwse-resize' }}
-                onPointerOut={() => { if (!dragRef.current) gl.domElement.style.cursor = '' }}
+                center
+                transform={false}
+                zIndexRange={[30, 0]}
               >
-                <circleGeometry args={[0.065, 20]} />
-                <meshBasicMaterial color="#ffffff" depthTest={false} />
-              </mesh>
+                <span
+                  className="surface-resize-handle"
+                  onPointerDown={(event) => {
+                    event.stopPropagation()
+                    event.preventDefault()
+                    const rect = gl.domElement.getBoundingClientRect()
+                    const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1
+                    const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1
+                    const startPoint = getPlanePoint(event.clientX, event.clientY)
+                    if (!startPoint) return
+                    dragRef.current = {
+                      id: item.id,
+                      mode: 'resize',
+                      offsetX: 0,
+                      offsetY: 0,
+                      cornerX: x,
+                      cornerY: y,
+                      anchorX: item.x - x * item.width / 2,
+                      anchorY: item.y - y * item.height / 2,
+                    }
+                    gl.domElement.style.cursor = 'nwse-resize'
+                    setSelectedId(item.id)
+                    void ndcX
+                    void ndcY
+                  }}
+                />
+              </Html>
             ))}
 
-            <Html
-              position={[item.x + item.width / 2, item.y + item.height / 2, 0.12]}
-              transform={false}
-              zIndexRange={[20, 0]}
-              style={{ pointerEvents: 'auto' }}
-            >
-              <div className="surface-toolbar" onPointerDown={(event) => event.stopPropagation()}>
-                <label className="surface-action" title="Choisir une image">
-                  Image
-                  <input
-                    type="file"
-                    accept="image/*"
-                    aria-label="Choisir une image pour cette surface"
-                    onChange={(event) => {
-                      updateImage(item.id, event.currentTarget.files?.[0])
-                      event.currentTarget.value = ''
-                    }}
-                  />
-                </label>
-                <button type="button" className="surface-action surface-delete" onClick={() => onDelete(item.id)}>
-                  Supprimer
-                </button>
-              </div>
-            </Html>
-            {!item.src && (
+            {mode === 'edit' && (
+              <Html
+                position={[item.x + item.width / 2, item.y + item.height / 2, 0.12]}
+                transform={false}
+                zIndexRange={[20, 0]}
+                style={{ pointerEvents: 'auto' }}
+              >
+                <div className="surface-toolbar" onPointerDown={(event) => event.stopPropagation()}>
+                  <label className="surface-action" title="Choisir une image">
+                    Image
+                    <input
+                      type="file"
+                      accept="image/*"
+                      aria-label="Choisir une image pour cette surface"
+                      onChange={(event) => {
+                        updateImage(item.id, event.currentTarget.files?.[0])
+                        event.currentTarget.value = ''
+                      }}
+                    />
+                  </label>
+                  <button type="button" className="surface-action surface-delete" onClick={() => onDelete(item.id)}>
+                    Supprimer
+                  </button>
+                </div>
+              </Html>
+            )}
+            {mode === 'edit' && !item.src && (
               <Html position={position} center transform={false} zIndexRange={[10, 0]}>
                 <span className="surface-placeholder">Choisir une image</span>
               </Html>
@@ -379,10 +408,12 @@ function SceneExporter({
 
 /** Drag to orbit, Shift + drag to roll, or Space + drag to pan the camera. */
 function ThreeAxisCameraControls({
+  mode,
   controlsRef,
   initialRoll,
   rollRef,
 }: {
+  mode: 'scene' | 'edit'
   controlsRef: ControlsRef
   initialRoll: number
   rollRef: RefObject<number>
@@ -442,8 +473,8 @@ function ThreeAxisCameraControls({
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 || event.defaultPrevented) return
       dragging = true
-      panning = spacePressed
-      rolling = event.shiftKey && !panning
+      panning = mode === 'edit' || spacePressed
+      rolling = mode === 'scene' && event.shiftKey && !panning
       pointer.x = event.clientX
       pointer.y = event.clientY
       element.setPointerCapture(event.pointerId)
@@ -477,7 +508,7 @@ function ThreeAxisCameraControls({
           controlsRef.current.update()
         }
         saveCameraView(camera.position, target, roll)
-      } else if (rolling || event.shiftKey) {
+      } else if (mode === 'scene' && (rolling || event.shiftKey)) {
         rolling = true
         roll += dx * coeff
         syncSpherical()
@@ -485,7 +516,7 @@ function ThreeAxisCameraControls({
         camera.rotateZ(roll)
         rollRef.current = roll
         saveCameraView(camera.position, target, roll)
-      } else {
+      } else if (mode === 'scene') {
         syncSpherical()
         spherical.theta -= dx * coeff
         spherical.phi = Math.max(
@@ -527,7 +558,61 @@ function ThreeAxisCameraControls({
       window.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
     }
-  }, [camera, controlsRef, gl, initialRoll, rollRef, size.height])
+  }, [camera, controlsRef, gl, initialRoll, mode, rollRef, size.height])
+
+  return null
+}
+
+
+function ModeCamera({
+  mode,
+  controlsRef,
+  initialView,
+  rollRef,
+}: {
+  mode: 'scene' | 'edit'
+  controlsRef: ControlsRef
+  initialView: CameraView | null
+  rollRef: RefObject<number>
+}) {
+  const { camera } = useThree()
+  const previousMode = useRef<'scene' | 'edit'>(mode)
+  const sceneView = useRef<CameraView | null>(null)
+
+  useEffect(() => {
+    if (previousMode.current === mode) return
+    previousMode.current = mode
+
+    if (mode === 'edit') {
+      const target = controlsRef.current?.target ?? new Vector3(...sceneConfig.camera.target)
+      sceneView.current = {
+        position: camera.position.toArray() as [number, number, number],
+        target: target.toArray() as [number, number, number],
+        roll: rollRef.current,
+      }
+      camera.position.set(target.x, target.y, target.z + 18)
+      camera.up.set(0, 1, 0)
+      camera.lookAt(target)
+      rollRef.current = 0
+      if (controlsRef.current) {
+        controlsRef.current.target.copy(target)
+        controlsRef.current.update()
+      }
+      return
+    }
+
+    const view = sceneView.current ?? initialView
+    const target = new Vector3(...(view?.target ?? sceneConfig.camera.target))
+    camera.position.set(...(view?.position ?? sceneConfig.camera.position))
+    camera.up.set(0, 1, 0)
+    camera.lookAt(target)
+    camera.rotateZ(view?.roll ?? 0)
+    rollRef.current = view?.roll ?? 0
+    if (controlsRef.current) {
+      controlsRef.current.target.copy(target)
+      controlsRef.current.update()
+    }
+  }, [camera, controlsRef, initialView, mode, rollRef])
 
   return null
 }
@@ -541,6 +626,7 @@ export default function App() {
   const [backgroundColor, setBackgroundColor] = useState(readBackgroundColor)
   const [items, setItems] = useState<EditableSurface[]>(getPositionedSurfaces)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [mode, setMode] = useState<'scene' | 'edit'>('scene')
   const addSurface = useCallback(() => {
     const id = `surface-${crypto.randomUUID()}`
     setItems((current) => [...current, { id, width: 4.2, height: 3, x: 0, y: 0, src: '', radius: sceneConfig.cornerRadius }])
@@ -574,7 +660,11 @@ export default function App() {
           glissant pour déplacer la vue, et utilise la molette pour zoomer.
         </p>
         <div className="header-actions">
-          <button type="button" className="add-surface-button" onClick={addSurface}>+ Surface</button>
+          <div className="mode-switch" role="group" aria-label="Mode de travail">
+            <button type="button" className={mode === 'scene' ? 'is-active' : ''} aria-pressed={mode === 'scene'} onClick={() => setMode('scene')}>Scène</button>
+            <button type="button" className={mode === 'edit' ? 'is-active' : ''} aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}>Édition</button>
+          </div>
+          {mode === 'edit' && <button type="button" className="add-surface-button" onClick={addSurface}>+ Surface</button>}
           <label className="background-control">
             <span>Fond</span>
             <input
@@ -627,8 +717,10 @@ export default function App() {
             args={[backgroundColor]}
           />
           <ambientLight intensity={2} />
-          <SurfaceGrid items={items} setItems={setItems} selectedId={selectedId} setSelectedId={setSelectedId} onDelete={deleteSurface} />
+          <SurfaceGrid mode={mode} items={items} setItems={setItems} selectedId={selectedId} setSelectedId={setSelectedId} onDelete={deleteSurface} />
+          <ModeCamera mode={mode} controlsRef={controlsRef} initialView={initialView} rollRef={rollRef} />
           <ThreeAxisCameraControls
+            mode={mode}
             controlsRef={controlsRef}
             initialRoll={initialView?.roll ?? 0}
             rollRef={rollRef}
@@ -653,7 +745,7 @@ export default function App() {
             }}
             enableRotate={false}
             enablePan={false}
-            enableZoom
+            enableZoom={mode === 'scene'}
             zoomSpeed={0.1}
             minDistance={4}
             maxDistance={22}
