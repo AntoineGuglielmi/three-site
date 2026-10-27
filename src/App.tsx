@@ -164,6 +164,7 @@ function SurfaceGrid({
     cornerY?: -1 | 1,
   ) => {
     event.stopPropagation()
+    event.nativeEvent.preventDefault()
     setSelectedId(item.id)
     const point = event.point
     dragRef.current = {
@@ -439,7 +440,7 @@ function ThreeAxisCameraControls({
     }
 
     const onPointerDown = (event: PointerEvent) => {
-      if (event.button !== 0) return
+      if (event.button !== 0 || event.defaultPrevented) return
       dragging = true
       panning = spacePressed
       rolling = event.shiftKey && !panning
@@ -566,9 +567,9 @@ export default function App() {
       <header className="page-header">
         <h1>Surface</h1>
         <p className="intro">
-          Une grille de surfaces pour mettre des images en scène. Modifie leur
-          disposition, leurs dimensions et leurs fichiers dans{' '}
-          <code>src/config/surfaces.ts</code>. Glisse pour orienter la vue,
+          Ajoute des surfaces, déplace-les en glissant leur intérieur et
+          redimensionne-les par les coins. Choisis une image pour chacune,
+          puis exporte la scène. Glisse dans le vide pour orienter la vue,
           maintiens Maj en glissant pour incliner la caméra, maintiens Espace en
           glissant pour déplacer la vue, et utilise la molette pour zoomer.
         </p>
