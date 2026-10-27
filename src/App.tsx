@@ -2,7 +2,7 @@ import { Image, OrbitControls } from '@react-three/drei'
 import { Canvas, useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef, RefObject } from 'react'
-import { Color, Spherical, Vector3 } from 'three'
+import { CanvasTexture, Color, SRGBColorSpace, Spherical, Vector3 } from 'three'
 import type { Surface } from './config/surfaces'
 import { sceneConfig, surfaces } from './config/surfaces'
 
@@ -105,12 +105,83 @@ function getPositionedSurfaces(): PositionedSurface[] {
   })
 }
 
+function createShadowTexture(width: number, height: number, radius: number) {
+  const canvas = document.createElement('canvas')
+  const scale = 2
+  const padding = 48
+  canvas.width = Math.max(1, Math.round(width * scale)) + padding * 2
+  canvas.height = Math.max(1, Math.round(height * scale)) + padding * 2
+
+  const context = canvas.getContext('2d')
+  if (!context) return null
+
+  const x = padding
+  const y = padding
+  const w = canvas.width - padding * 2
+  const h = canvas.height - padding * 2
+  const r = Math.min(radius * Math.min(w, h), w / 2, h / 2)
+
+  context.fillStyle = '#000'
+  context.shadowColor = 'rgba(0, 0, 0, 0.24)'
+  context.shadowBlur = 24
+  context.shadowOffsetX = 0
+  context.shadowOffsetY = 12
+  context.beginPath()
+  context.roundRect(x, y, w, h, r)
+  context.fill()
+
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  return texture
+}
+
+function SurfaceShadow({
+  surface,
+  position,
+}: {
+  surface: Surface
+  position: [number, number, number]
+}) {
+  const width = surface.width / sceneConfig.pixelsPerUnit
+  const height = surface.height / sceneConfig.pixelsPerUnit
+  const radius = surface.radius ?? sceneConfig.cornerRadius
+  const texture = useMemo(
+    () => createShadowTexture(width, height, radius),
+    [height, radius, width],
+  )
+
+  useEffect(() => () => texture?.dispose(), [texture])
+  if (!texture) return null
+
+  const padding = 48 / 2
+  const shadowWidth = width + padding * 2 / sceneConfig.pixelsPerUnit
+  const shadowHeight = height + padding * 2 / sceneConfig.pixelsPerUnit
+
+  return (
+    <mesh
+      position={[position[0], position[1] - 0.035, position[2] - 0.01]}
+      renderOrder={0}
+    >
+      <planeGeometry args={[shadowWidth, shadowHeight]} />
+      <meshBasicMaterial
+        map={texture}
+        transparent
+        opacity={0.8}
+        depthWrite={false}
+        toneMapped={false}
+      />
+    </mesh>
+  )
+}
+
 function SurfaceGrid() {
   const items = useMemo(getPositionedSurfaces, [])
 
   return (
     <group>
       {items.map(({ surface, position, key }) => (
+        <group key={key}>
+          <SurfaceShadow surface={surface} position={position} />
         <Image
           key={key}
           url={surface.src}
@@ -124,6 +195,7 @@ function SurfaceGrid() {
           transparent
           toneMapped={false}
         />
+        </group>
       ))}
     </group>
   )
