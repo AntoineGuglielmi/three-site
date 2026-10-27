@@ -782,25 +782,27 @@ export default function App() {
               }
             />
           </label>
-          <div
-            className="export-actions"
-            aria-label="Exporter les surfaces"
-          >
-            <button
-              type="button"
-              onClick={() => exportScene?.('png')}
-              disabled={!exportScene}
+          {mode === 'scene' && (
+            <div
+              className="export-actions"
+              aria-label="Exporter les surfaces"
             >
-              PNG
-            </button>
-            <button
-              type="button"
-              onClick={() => exportScene?.('jpg')}
-              disabled={!exportScene}
-            >
-              JPG
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => exportScene?.('png')}
+                disabled={!exportScene}
+              >
+                PNG
+              </button>
+              <button
+                type="button"
+                onClick={() => exportScene?.('jpg')}
+                disabled={!exportScene}
+              >
+                JPG
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
