@@ -1,6 +1,6 @@
 import { Image, OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Spherical, Vector3 } from "three";
 import type { Surface } from "./config/surfaces";
 import { sceneConfig, surfaces } from "./config/surfaces";
@@ -10,6 +10,8 @@ type PositionedSurface = {
   position: [number, number, number];
   key: string;
 };
+
+type ControlsRef = React.RefObject<React.ComponentRef<typeof OrbitControls> | null>;
 
 function getPositionedSurfaces(): PositionedSurface[] {
   const unit = sceneConfig.pixelsPerUnit;
@@ -67,29 +69,58 @@ function SurfaceGrid() {
   );
 }
 
-/** Drag to orbit around the grid; Shift + drag rolls the camera around its view axis. */
-function ThreeAxisCameraControls() {
-  const { camera, gl } = useThree();
+/** Drag to orbit, Shift + drag to roll, or Space + drag to pan the camera. */
+function ThreeAxisCameraControls({ controlsRef }: { controlsRef: ControlsRef }) {
+  const { camera, gl, size } = useThree();
 
   useEffect(() => {
     const element = gl.domElement;
-    const target = new Vector3(...sceneConfig.camera.target);
+    const initialTarget = new Vector3(...sceneConfig.camera.target);
+    const target = new Vector3();
     const spherical = new Spherical();
     const offset = new Vector3();
+    const right = new Vector3();
+    const up = new Vector3();
+    const panOffset = new Vector3();
     const pointer = { x: 0, y: 0 };
     let dragging = false;
     let rolling = false;
+    let panning = false;
+    let spacePressed = false;
     let roll = 0;
 
     const syncSpherical = () => {
+      target.copy(controlsRef.current?.target ?? initialTarget);
       offset.copy(camera.position).sub(target);
       spherical.setFromVector3(offset);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space" || event.repeat) return;
+      const targetElement = event.target;
+      if (targetElement instanceof HTMLElement && (
+        targetElement.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(targetElement.tagName)
+      )) return;
+      spacePressed = true;
+      if (dragging) panning = true;
+      event.preventDefault();
+    };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.code !== "Space") return;
+      spacePressed = false;
+    };
+
+    const onBlur = () => {
+      spacePressed = false;
     };
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
       dragging = true;
-      rolling = event.shiftKey;
+      panning = spacePressed;
+      rolling = event.shiftKey && !panning;
       pointer.x = event.clientX;
       pointer.y = event.clientY;
       element.setPointerCapture(event.pointerId);
@@ -103,21 +134,45 @@ function ThreeAxisCameraControls() {
       pointer.x = event.clientX;
       pointer.y = event.clientY;
 
-      if (event.shiftKey || rolling) {
+      if (panning || (spacePressed && !rolling)) {
+        panning = true;
+        syncSpherical();
+        const distance = Math.max(offset.length(), 0.001);
+        const worldUnitsPerPixel = (2 * distance * Math.tan((camera.fov * Math.PI) / 360)) / size.height;
+        camera.updateMatrixWorld();
+        right.setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+        up.setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+        panOffset
+          .copy(right)
+          .multiplyScalar(-dx * worldUnitsPerPixel)
+          .addScaledVector(up, dy * worldUnitsPerPixel);
+        camera.position.add(panOffset);
+        target.add(panOffset);
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(target);
+          controlsRef.current.update();
+        }
+      } else if (rolling || event.shiftKey) {
+        rolling = true;
         roll += dx * 0.006;
+        syncSpherical();
+        camera.lookAt(target);
+        camera.rotateZ(roll);
       } else {
+        syncSpherical();
         spherical.theta -= dx * 0.006;
         spherical.phi = Math.max(0.08, Math.min(Math.PI - 0.08, spherical.phi - dy * 0.006));
         offset.setFromSpherical(spherical);
         camera.position.copy(target).add(offset);
+        camera.lookAt(target);
+        camera.rotateZ(roll);
       }
-
-      camera.lookAt(target);
-      camera.rotateZ(roll);
     };
 
     const onPointerUp = (event: PointerEvent) => {
       dragging = false;
+      rolling = false;
+      panning = false;
       if (element.hasPointerCapture(event.pointerId)) {
         element.releasePointerCapture(event.pointerId);
       }
@@ -127,20 +182,27 @@ function ThreeAxisCameraControls() {
     element.addEventListener("pointermove", onPointerMove);
     element.addEventListener("pointerup", onPointerUp);
     element.addEventListener("pointercancel", onPointerUp);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
 
     return () => {
       element.removeEventListener("pointerdown", onPointerDown);
       element.removeEventListener("pointermove", onPointerMove);
       element.removeEventListener("pointerup", onPointerUp);
       element.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
     };
-  }, [camera, gl]);
+  }, [camera, controlsRef, gl, size.height]);
 
   return null;
 }
 
 export default function App() {
   const { camera } = sceneConfig;
+  const controlsRef = useRef<React.ComponentRef<typeof OrbitControls>>(null);
 
   return (
     <main className="app-shell">
@@ -150,7 +212,7 @@ export default function App() {
           Une grille de surfaces pour mettre des images en scène. Modifie leur disposition,
           leurs dimensions et leurs fichiers dans <code>src/config/surfaces.ts</code>.
           Glisse pour orienter la vue, maintiens Maj en glissant pour incliner la caméra,
-          et utilise la molette pour zoomer.
+          maintiens Espace en glissant pour déplacer la vue, et utilise la molette pour zoomer.
         </p>
       </header>
 
@@ -168,8 +230,9 @@ export default function App() {
           <color attach="background" args={[sceneConfig.background]} />
           <ambientLight intensity={2} />
           <SurfaceGrid />
-          <ThreeAxisCameraControls />
+          <ThreeAxisCameraControls controlsRef={controlsRef} />
           <OrbitControls
+            ref={controlsRef}
             makeDefault
             target={camera.target}
             enableRotate={false}
