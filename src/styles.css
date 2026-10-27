@@ -185,6 +185,81 @@ h1 {
   color: #8b3f37;
 }
 
+.surface-context {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.surface-menu-trigger {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border: 1px solid rgb(68 69 63 / 16%);
+  border-radius: 8px;
+  color: #44453f;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 10%);
+  cursor: pointer;
+}
+
+.surface-menu-trigger:hover,
+.surface-menu-trigger[aria-expanded='true'] {
+  background: #e8e8e1;
+}
+
+.surface-menu-trigger svg,
+.surface-menu-action svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.surface-context-menu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgb(68 69 63 / 14%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 95%);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 12%);
+  white-space: nowrap;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+}
+
+.surface-menu-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #44453f;
+  background: #f4f3f0;
+  cursor: pointer;
+}
+
+.surface-menu-action:hover {
+  border-color: rgb(68 69 63 / 12%);
+  background: #e8e8e1;
+}
+
+.surface-menu-action input {
+  display: none;
+}
+
+.surface-menu-action.surface-delete {
+  color: #8b3f37;
+}
+
 .surface-placeholder {
   display: inline-block;
   padding: 8px 12px;
