@@ -62,7 +62,9 @@ code {
   align-items: baseline;
   gap: 24px;
   padding: 26px clamp(20px, 4vw, 64px) 18px;
-  background: transparent;
+  background: rgb(255 255 255 / 76%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   pointer-events: none;
   justify-content: space-between;
   flex-wrap: wrap;
