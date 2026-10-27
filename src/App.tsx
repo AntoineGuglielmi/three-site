@@ -109,8 +109,8 @@ function createShadowTexture(width: number, height: number, radius: number) {
   const canvas = document.createElement('canvas')
   const scale = 2
   const padding = 48
-  canvas.width = Math.max(1, Math.round(width * scale)) + padding * 2
-  canvas.height = Math.max(1, Math.round(height * scale)) + padding * 2
+  canvas.width = Math.max(1, Math.round(width * sceneConfig.pixelsPerUnit * scale)) + padding * 2
+  canvas.height = Math.max(1, Math.round(height * sceneConfig.pixelsPerUnit * scale)) + padding * 2
 
   const context = canvas.getContext('2d')
   if (!context) return null
@@ -126,6 +126,15 @@ function createShadowTexture(width: number, height: number, radius: number) {
   context.shadowBlur = 24
   context.shadowOffsetX = 0
   context.shadowOffsetY = 12
+  context.beginPath()
+  context.roundRect(x, y, w, h, r)
+  context.fill()
+
+  // Keep only the blurred shadow, not the opaque shape underneath the image.
+  context.shadowColor = 'transparent'
+  context.shadowBlur = 0
+  context.shadowOffsetY = 0
+  context.globalCompositeOperation = 'destination-out'
   context.beginPath()
   context.roundRect(x, y, w, h, r)
   context.fill()
