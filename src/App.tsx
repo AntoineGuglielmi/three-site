@@ -52,7 +52,7 @@ function SurfaceGrid() {
         <Image
           key={key}
           url={surface.src}
-          alt={surface.alt}
+          name={surface.alt ?? surface.src}
           position={position}
           scale={[
             surface.width / sceneConfig.pixelsPerUnit,
