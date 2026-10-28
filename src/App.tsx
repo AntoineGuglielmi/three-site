@@ -76,12 +76,11 @@ function saveCameraView(position: Vector3, target: Vector3, roll: number) {
 const SURFACES_KEY = 'surface-layout'
 
 function readStoredSurfaces(): EditableSurface[] {
-  const defaults = getPositionedSurfaces()
   try {
     const stored = localStorage.getItem(SURFACES_KEY)
-    if (!stored) return defaults
+    if (!stored) return []
     const parsed: unknown = JSON.parse(stored)
-    if (!Array.isArray(parsed)) return defaults
+    if (!Array.isArray(parsed)) return []
 
     const valid = parsed.every((item): item is EditableSurface =>
       item !== null &&
@@ -95,9 +94,9 @@ function readStoredSurfaces(): EditableSurface[] {
       Number.isFinite(item.radius) && item.radius >= 0 &&
       (item.alt === undefined || typeof item.alt === 'string'),
     )
-    return valid ? parsed as EditableSurface[] : defaults
+    return valid ? parsed as EditableSurface[] : []
   } catch {
-    return defaults
+    return []
   }
 }
 
