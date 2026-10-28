@@ -9,29 +9,9 @@ npm install
 npm run dev
 ```
 
-## Configurer les surfaces
+## Surfaces
 
-Tout se règle dans `src/config/surfaces.ts`.
-
-```ts
-export const surfaces: Surface[][] = [
-  [
-    { width: 340, height: 230, src: "/images/projet-a.jpg" },
-    { width: 280, height: 230, src: "/images/projet-b.jpg" },
-  ],
-  [
-    { width: 280, height: 190, src: "/images/projet-c.jpg" },
-    { width: 340, height: 190, src: "/images/projet-d.jpg" },
-  ],
-];
-```
-
-- Chaque tableau imbriqué représente une rangée.
-- Chaque objet représente une surface.
-- `width` et `height` sont exprimés en pixels de référence. `pixelsPerUnit` convertit ces dimensions en unités Three.js.
-- `src` accepte un chemin local dans `public/` (par exemple `/images/projet-a.jpg`) ou une URL.
-- `radius` permet de régler individuellement l'arrondi ; sinon `cornerRadius` s'applique à toutes les surfaces.
-- `columnGap` et `rowGap` règlent les espaces entre surfaces.
+Les surfaces se créent et se configurent directement dans l’interface, en mode **Édition**. Leur position, leurs dimensions et leurs images sont sauvegardées dans le navigateur.
 
 ## Caméra
 
