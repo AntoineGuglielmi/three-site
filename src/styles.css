@@ -97,8 +97,11 @@ h1 {
 }
 
 .mode-switch button {
+  display: grid;
+  place-items: center;
+  width: 34px;
   min-height: 30px;
-  padding: 0 11px;
+  padding: 0;
   border: 0;
   border-radius: 5px;
   color: #686960;
@@ -106,6 +109,15 @@ h1 {
   font-family: 'DM Mono', monospace;
   font-size: 11px;
   cursor: pointer;
+}
+
+.mode-switch button svg {
+  display: block;
+}
+
+.mode-switch button:focus-visible {
+  outline: 2px solid #414d43;
+  outline-offset: 2px;
 }
 
 .mode-switch button:hover {
