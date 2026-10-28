@@ -4,7 +4,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef, Dispatch, RefObject, SetStateAction } from 'react'
 import { Color, Plane, Raycaster, Spherical, Vector2, Vector3 } from 'three'
-import { sceneConfig, surfaces } from './config/surfaces'
+import { sceneConfig } from './config/scene'
 
 type EditableSurface = {
   id: string
@@ -71,48 +71,6 @@ function saveCameraView(position: Vector3, target: Vector3, roll: number) {
   } catch {
     // The scene remains usable when storage is unavailable.
   }
-}
-
-function getPositionedSurfaces(): EditableSurface[] {
-  const unit = sceneConfig.pixelsPerUnit
-  const columnGap = sceneConfig.columnGap / unit
-  const rowGap = sceneConfig.rowGap / unit
-  const rowHeights = surfaces.map((row) =>
-    Math.max(0, ...row.map((item) => item.height / unit)),
-  )
-  const totalHeight =
-    rowHeights.reduce((sum, height) => sum + height, 0) +
-    Math.max(0, surfaces.length - 1) * rowGap
-  let yCursor = totalHeight / 2
-
-  return surfaces.flatMap((row, rowIndex) => {
-    const rowHeight = rowHeights[rowIndex]
-    const rowWidth =
-      row.reduce((sum, item) => sum + item.width / unit, 0) +
-      Math.max(0, row.length - 1) * columnGap
-    let xCursor = -rowWidth / 2
-
-    const positioned = row.map((surface, surfaceIndex) => {
-      const width = surface.width / unit
-      const height = surface.height / unit
-      const x = xCursor + width / 2
-      xCursor += width + columnGap
-
-      return {
-        id: `surface-${rowIndex}-${surfaceIndex}`,
-        width,
-        height,
-        x,
-        y: yCursor - rowHeight / 2,
-        src: surface.src,
-        radius: surface.radius ?? sceneConfig.cornerRadius,
-        alt: surface.alt,
-      }
-    })
-
-    yCursor -= rowHeight + rowGap
-    return positioned
-  })
 }
 
 const SURFACES_KEY = 'surface-layout'
