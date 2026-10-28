@@ -4,6 +4,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentRef, Dispatch, RefObject, SetStateAction } from 'react'
 import { Color, Plane, Raycaster, Spherical, Vector2, Vector3 } from 'three'
+import { Rotate3D, SquarePen } from 'lucide-react'
 import { sceneConfig } from './config/scene'
 
 type EditableSurface = {
@@ -724,8 +725,8 @@ export default function App() {
         </p>
         <div className="header-actions">
           <div className="mode-switch" role="group" aria-label="Mode de travail">
-            <button type="button" className={mode === 'scene' ? 'is-active' : ''} aria-pressed={mode === 'scene'} onClick={() => setMode('scene')}>Scène</button>
-            <button type="button" className={mode === 'edit' ? 'is-active' : ''} aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}>Édition</button>
+            <button type="button" className={mode === 'scene' ? 'is-active' : ''} aria-label="Scène" title="Scène" aria-pressed={mode === 'scene'} onClick={() => setMode('scene')}><Rotate3D aria-hidden="true" size={17} strokeWidth={1.8} /></button>
+            <button type="button" className={mode === 'edit' ? 'is-active' : ''} aria-label="Édition" title="Édition" aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}><SquarePen aria-hidden="true" size={17} strokeWidth={1.8} /></button>
           </div>
           {mode === 'edit' && <button type="button" className="add-surface-button" onClick={addSurface}>+ Surface</button>}
           <label className="background-control">
